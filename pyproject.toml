@@ -1,0 +1,18 @@
+[project]
+name = "lifekit"
+version = "0.1.0"
+description = "LifeKit as a Gradio Space: field answers with the source line behind them"
+requires-python = ">=3.11"
+dependencies = [
+    "gradio>=5",
+    "huggingface-hub>=0.25",
+    "pillow>=10",
+    "pypdfium2>=4",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
