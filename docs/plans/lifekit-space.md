@@ -26,7 +26,10 @@ shipping unchanged; this repo holds everything new.
 
 ## Phase 1: no GPU
 
-Surfaces, each a tab in one Gradio Blocks app:
+The frontend follows `interface-migration.md`: a literal transfer of the app's interface
+into one custom Gradio component, replacing the tabbed layout this section first
+described. The list below now names the phase 1 capability set, and the migration plan
+names each screen's form:
 
 - **Walks**: the weather and celestial sessions transcribed from
   `flux/app/src/data/vss.ts` into Python data plus a gap-tracking engine. The engine asks a
