@@ -31,6 +31,7 @@ def _walk_step(session_id: str, answers: dict):
             gr.update(value=question.because, visible=True),
             gr.update(value="", visible=False),
             gr.update(visible=False),
+            gr.update(visible=True),
         )
     finding = walks.finding_for(session, answers)
     image = (
@@ -42,6 +43,7 @@ def _walk_step(session_id: str, answers: dict):
         gr.update(visible=False),
         gr.update(value=_result_markdown(session, finding), visible=True),
         gr.update(value=image, visible=image is not None),
+        gr.update(visible=False),
     )
 
 
@@ -132,11 +134,11 @@ with gr.Blocks(title="LifeKit") as demo:
         question_md = gr.Markdown(visible=False)
         option_radio = gr.Radio(choices=[], visible=False, label="Answer")
         because_md = gr.Markdown(visible=False)
-        answer_btn = gr.Button("Answer")
+        answer_btn = gr.Button("Answer", visible=False)
         result_md = gr.Markdown(visible=False)
         result_image = gr.Image(visible=False, label="Figure", type="filepath")
 
-        walk_outputs = [question_md, option_radio, because_md, result_md, result_image]
+        walk_outputs = [question_md, option_radio, because_md, result_md, result_image, answer_btn]
         session_choice.change(
             start_walk,
             inputs=[session_choice],
