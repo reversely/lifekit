@@ -4,10 +4,14 @@ version = "0.1.0"
 description = "LifeKit as a Gradio Space: field answers with the source line behind them"
 requires-python = ">=3.11"
 dependencies = [
+    "beautifulsoup4>=4.15.0",
+    "fastapi>=0.141.1",
     "gradio>=5",
+    "httpx>=0.28.1",
     "huggingface-hub>=0.25",
     "pillow>=10",
     "pypdfium2>=4",
+    "uvicorn>=0.52.3",
 ]
 
 [dependency-groups]
