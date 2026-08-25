@@ -1,0 +1,225 @@
+"""The question loop: store, name, find a source, pull it as a volume, re-ask, digest.
+
+States of a stored question, per docs/content/library-schema.md 1.9:
+stored -> named -> searching -> staged -> extracted -> indexed -> re_asked -> resolved | exhausted
+
+Sources are searched in licence order. This prototype searches Wikipedia (CC BY-SA 4.0),
+which is the open encyclopedic class; agency classes join as their fetchers exist.
+"""
+
+import hashlib
+import json
+import re
+import sqlite3
+import urllib.parse
+import urllib.request
+from datetime import datetime, timezone
+
+from .build import DB_PATH, connect, now
+from .fetch import UA, VOLUMES_DIR
+from .pages import html_pages
+from .segment import segment
+from .tags import apply_tags
+
+WIKI_SEARCH = "https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&srlimit=3&srsearch="
+WIKI_PAGE = "https://en.wikipedia.org/wiki/"
+SECTIONS = ["medicine", "shelter", "fire", "water", "food", "poisonous-plants", "animals",
+            "tools", "direction", "signaling", "environments", "hazards"]
+
+TOPIC_PROMPT = (
+    "Name the topic of this question in one to four words, as a noun phrase a librarian "
+    "would file it under. Output the phrase only. If the question is small talk or a "
+    "greeting, output the word none."
+)
+SECTION_PROMPT = (
+    "Choose the one section of a survival library this document belongs in. Sections and what "
+    "they hold: medicine (first aid, illness, medicines); shelter (tents, snow shelters, home "
+    "sheltering); fire (campfires, stoves, wildfire); water (finding, treating, crossing water); "
+    "food (storing, foraging, hunting, cooking); poisonous-plants; animals (bites, stings, "
+    "encounters); tools (knots, cordage, hand tools, repairs, equipment); direction (maps, "
+    "compass, GPS, stars); signaling (rescue, radio, beacons); environments (weather, heat, cold, "
+    "sea); hazards (radiation, chemical, pandemic, outages). Output the section id only."
+)
+
+
+def _get(url: str, timeout: int = 60) -> bytes:
+    request = urllib.request.Request(url, headers={"User-Agent": UA + " lifekit-loop/0.1", "Accept": "*/*"})
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return response.read()
+
+
+# -- questions -----------------------------------------------------------------
+
+def store_question(db: sqlite3.Connection, text: str, profile: dict | None = None) -> str:
+    qid = "q_" + hashlib.sha1((text + now()).encode()).hexdigest()[:10]
+    db.execute(
+        "INSERT INTO question (id, text, profile_snapshot, asked_at, state) VALUES (?,?,?,?,?)",
+        (qid, text, json.dumps(profile or {}), now(), "stored"),
+    )
+    db.commit()
+    return qid
+
+
+def set_state(db, qid: str, state: str, **fields) -> None:
+    sets = ", ".join(f"{k} = ?" for k in fields)
+    db.execute(f"UPDATE question SET state = ?{', ' + sets if sets else ''} WHERE id = ?", (state, *fields.values(), qid))
+    db.commit()
+
+
+def pending(db) -> list[dict]:
+    return [
+        {"id": r[0], "text": r[1], "state": r[2]}
+        for r in db.execute("SELECT id, text, state FROM question WHERE state NOT IN ('resolved', 'exhausted') ORDER BY asked_at")
+    ]
+
+
+# -- sources -------------------------------------------------------------------
+
+def wikipedia_candidates(topic: str) -> list[dict]:
+    body = _get(WIKI_SEARCH + urllib.parse.quote(topic))
+    hits = json.loads(body)["query"]["search"]
+    return [{"title": h["title"], "url": WIKI_PAGE + h["title"].replace(" ", "_")} for h in hits]
+
+
+def slug(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60]
+
+
+def pull_wikipedia(db, candidate: dict, section: str, question_id: str) -> str:
+    """Fetch one article, cut it, index it, tag it. Returns the volume id."""
+    volume_id = f"wikipedia-{slug(candidate['title'])}"
+    if db.execute("SELECT 1 FROM volume WHERE id = ? AND page_count > 0", (volume_id,)).fetchone():
+        return volume_id  # already in the library; a pull is idempotent
+    dest = VOLUMES_DIR / volume_id
+    dest.mkdir(parents=True, exist_ok=True)
+    body = _get(candidate["url"])
+    (dest / "source.html").write_bytes(body)
+    sha = hashlib.sha256(body).hexdigest()
+    retrieved = now()
+    (dest / "source.meta.json").write_text(json.dumps({
+        "id": volume_id, "url": candidate["url"], "sha256": sha, "bytes": len(body),
+        "content_type": "text/html", "retrieved": retrieved, "fetched_by": "lifekit.library.loop 0.1",
+    }, indent=1))
+    db.execute("DELETE FROM passage_fts WHERE passage_id IN (SELECT id FROM passage WHERE page_id IN (SELECT id FROM page WHERE volume_id = ?))", (volume_id,))
+    db.execute("DELETE FROM passage WHERE page_id IN (SELECT id FROM page WHERE volume_id = ?)", (volume_id,))
+    db.execute("DELETE FROM page WHERE volume_id = ?", (volume_id,))
+    db.execute("DELETE FROM shelf_volume WHERE volume_id = ?", (volume_id,))
+    db.execute("DELETE FROM volume WHERE id = ?", (volume_id,))
+    db.execute(
+        "INSERT INTO volume (id, title, publisher, edition, url, format, licence, licence_statement, licence_read_at,"
+        " retrieved, sha256, carry, tier, freshness) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (volume_id, candidate["title"], "Wikipedia contributors", retrieved[:10], candidate["url"], "html",
+         "CC-BY-SA-4.0", "Text is available under the Creative Commons Attribution-ShareAlike 4.0 License",
+         "https://en.wikipedia.org/wiki/Wikipedia:Copyrights", retrieved, sha, "carry", "learned", "live"),
+    )
+    order = db.execute("SELECT coalesce(max(\"order\"), 0) + 1 FROM shelf_volume WHERE shelf_id = ?", (section,)).fetchone()[0]
+    db.execute("INSERT INTO shelf_volume VALUES (?,?,?,?)", (section, volume_id, order, "reference"))
+    pages = html_pages(dest / "source.html", candidate["url"])
+    for page in pages:
+        page_id = f"{volume_id}/p{page['number']:03d}"
+        db.execute("INSERT INTO page (id, volume_id, number, anchor, text) VALUES (?,?,?,?,?)",
+                   (page_id, volume_id, page["number"], page["anchor"], page["text"]))
+        for n, passage in enumerate(segment(page["text"]), start=1):
+            pid = f"{page_id}/{n}"
+            db.execute("INSERT INTO passage (id, page_id, start, \"end\", text, kind) VALUES (?,?,?,?,?,?)",
+                       (pid, page_id, passage["start"], passage["end"], passage["text"], passage["kind"]))
+            db.execute("INSERT INTO passage_fts (text, passage_id) VALUES (?, ?)", (passage["text"], pid))
+    db.execute("UPDATE volume SET page_count = ? WHERE id = ?", (len(pages), volume_id))
+    apply_tags(db, volume_id, [f"section:{section}", "type:encyclopedia", "publisher:Wikipedia", "tier:learned"])
+    _record_learned(section, volume_id, candidate, retrieved)
+    db.execute("INSERT INTO provenance VALUES (?,?,?,?,?)", (volume_id, "pull", "lifekit.library.loop 0.1", json.dumps([question_id]), now()))
+    db.commit()
+    return volume_id
+
+
+def _record_learned(section: str, volume_id: str, candidate: dict, retrieved: str) -> None:
+    """Append the volume to the shelf's learned.tsv so a rebuild keeps it."""
+    import csv
+
+    from lifekit.packs import LOCAL_PACKS
+
+    path = LOCAL_PACKS / "shelves" / section / "learned.tsv"
+    cols = ["id", "title", "publisher", "edition", "url", "format", "licence", "licence_statement",
+            "licence_read_at", "carry", "role", "freshness", "tags"]
+    existing = set()
+    if path.exists():
+        with path.open(newline="") as handle:
+            existing = {r["id"] for r in csv.DictReader(handle, delimiter="\t")}
+    if volume_id in existing:
+        return
+    new = not path.exists()
+    with path.open("a", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=cols, delimiter="\t", lineterminator="\n")
+        if new:
+            writer.writeheader()
+        writer.writerow({
+            "id": volume_id, "title": candidate["title"], "publisher": "Wikipedia contributors",
+            "edition": retrieved[:10], "url": candidate["url"], "format": "html", "licence": "CC-BY-SA-4.0",
+            "licence_statement": "Text is available under the Creative Commons Attribution-ShareAlike 4.0 License",
+            "licence_read_at": "https://en.wikipedia.org/wiki/Wikipedia:Copyrights", "carry": "carry",
+            "role": "reference", "freshness": "live", "tags": "type:encyclopedia,publisher:Wikipedia,tier:learned",
+        })
+
+
+# -- the pass ------------------------------------------------------------------
+
+def work(db, ask, answer, covers=None, log=print) -> list[dict]:
+    """Work every pending question once. `ask(system, user)` calls the model; `answer(db, question)`
+    returns (text, hits). Returns the digest entries produced."""
+    from .query import search
+
+    digest = []
+    for q in pending(db):
+        qid, text = q["id"], q["text"]
+        topic = ask(TOPIC_PROMPT, text).strip().strip('."').lower()
+        if not topic or topic == "none":
+            set_state(db, qid, "exhausted", topic=topic)
+            log(f"{qid}: no topic")
+            continue
+        set_state(db, qid, "named", topic=topic)
+        try:
+            candidates = wikipedia_candidates(topic)
+        except Exception as error:  # noqa: BLE001
+            log(f"{qid}: search failed {error}")
+            continue
+        set_state(db, qid, "searching")
+        said = ask(SECTION_PROMPT, f"Question: {text}\nTopic: {topic}").strip().lower()
+        section = next((s for s in sorted(SECTIONS, key=len, reverse=True) if s in said), "tools")
+        pulled = []
+        for candidate in candidates[:2]:
+            try:
+                vid = pull_wikipedia(db, candidate, section, qid)
+                pulled.append(vid)
+                log(f"{qid}: pulled {vid} into {section}")
+            except Exception as error:  # noqa: BLE001
+                log(f"{qid}: pull failed {candidate['title']}: {error}")
+        if not pulled:
+            set_state(db, qid, "exhausted")
+            continue
+        set_state(db, qid, "indexed")
+        if covers:
+            for vid in pulled:
+                covers(vid)
+        # Re-ask with the topic's words beside the question's, so a source that spells or
+        # names the thing differently ("tire" for "tyre") can still be found.
+        from .covers import covered as is_covered, strip_verdict
+
+        text_answer, hits = answer(db, f"{text} {topic}")
+        hit_ids = [h["passage"] for h in hits[:3]]
+        covered = bool(hits) and is_covered(text_answer)
+        text_answer = strip_verdict(text_answer)
+        set_state(db, qid, "resolved" if covered else "exhausted", answer_passages=json.dumps(hit_ids))
+        db.execute("INSERT OR REPLACE INTO digest (question_id, answer, volumes, at) VALUES (?,?,?,?)",
+                   (qid, text_answer, json.dumps(pulled), now()))
+        db.commit()
+        digest.append({"question": text, "answer": text_answer, "volumes": pulled, "state": "resolved" if covered else "exhausted"})
+    return digest
+
+
+def ensure_tables(db) -> None:
+    db.executescript(
+        "CREATE TABLE IF NOT EXISTS question (id TEXT PRIMARY KEY, text TEXT NOT NULL, profile_snapshot TEXT,"
+        " asked_at TEXT, state TEXT NOT NULL DEFAULT 'stored', topic TEXT, answer_passages TEXT);"
+        "CREATE TABLE IF NOT EXISTS digest (question_id TEXT PRIMARY KEY, answer TEXT, volumes TEXT, at TEXT);"
+    )
+    db.commit()
