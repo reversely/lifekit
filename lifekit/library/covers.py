@@ -14,12 +14,10 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from huggingface_hub import InferenceClient
-
 from .build import DB_PATH, connect
 from .fetch import VOLUMES_DIR
 
-MODEL = "meta-llama/Llama-3.1-8B-Instruct"
+from . import provider
 
 COVER_PROMPT = (
     "Write the cover text for a document from its table of contents and first pages. "
@@ -80,14 +78,8 @@ def first_pages(volume_id: str, db, chars: int = 3500) -> str:
     return "\n\n".join(r[0] for r in rows)[:chars]
 
 
-def ask(client: InferenceClient, system: str, user: str, max_tokens: int = 300) -> str:
-    response = client.chat_completion(
-        model=MODEL,
-        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-        max_tokens=max_tokens,
-        temperature=0.2,
-    )
-    return response.choices[0].message.content.strip()
+def ask(system: str, user: str, max_tokens: int = 300, kind: str = "small") -> str:
+    return provider.ask(system, user, max_tokens=max_tokens, kind=kind)
 
 
 def clean(text: str) -> str:
@@ -111,7 +103,6 @@ def write_covers(shelf: str) -> None:
         "CREATE TABLE IF NOT EXISTS cover (volume_id TEXT PRIMARY KEY, text TEXT, digest_line TEXT,"
         " model TEXT, at TEXT, edited INTEGER DEFAULT 0);"
     )
-    client = InferenceClient()
     volumes = db.execute(
         "SELECT v.id, v.title, v.publisher, v.edition, v.format FROM volume v"
         " JOIN shelf_volume sv ON sv.volume_id = v.id WHERE sv.shelf_id = ? AND v.carry = 'carry'"
@@ -127,15 +118,15 @@ def write_covers(shelf: str) -> None:
             toc = toc_of(volume_id, fmt, db)
             body = first_pages(volume_id, db)
             user = f"Title: {title}\nPublisher: {publisher}\nEdition: {edition}\n\nTable of contents:\n{toc}\n\nFirst pages:\n{body}"
-            text = clean(ask(client, COVER_PROMPT, user))
+            text = clean(ask(COVER_PROMPT, user))
             if check(text):
-                text = clean(ask(client, COVER_PROMPT + " Do not repeat the mistakes of a first draft that used banned words.", user))
+                text = clean(ask(COVER_PROMPT + " Do not repeat the mistakes of a first draft that used banned words.", user))
             hand.write_text(text + "\n")
             edited = 0
-        digest = clean(ask(client, DIGEST_PROMPT, f"Cover text:\n{text}\n\nStored questions: none.", max_tokens=80))
+        digest = clean(ask(DIGEST_PROMPT, f"Cover text:\n{text}\n\nStored questions: none.", max_tokens=80))
         db.execute(
             "INSERT OR REPLACE INTO cover VALUES (?,?,?,?,?,?)",
-            (volume_id, text, digest, MODEL, datetime.now(timezone.utc).isoformat(timespec="seconds"), edited),
+            (volume_id, text, digest, provider.endpoint("small").name, datetime.now(timezone.utc).isoformat(timespec="seconds"), edited),
         )
         db.commit()
         print(f"== {volume_id}\n{text}\n-- {digest}\n")
@@ -149,7 +140,7 @@ def answer(question: str) -> str:
     passages = "\n\n".join(
         f"[{h['title']}, {h['edition']}, page {h['number']}]\n{h['text']}" for h in hits
     )
-    return ask(InferenceClient(), ANSWER_PROMPT, f"Question: {question}\n\nPassages:\n{passages}", max_tokens=250)
+    return ask(ANSWER_PROMPT, f"Question: {question}\n\nPassages:\n{passages}", max_tokens=250, kind="answer")
 
 
 BANNED_OPENINGS = ("this document", "the document", "it ", "this ", "in this")
@@ -199,7 +190,6 @@ def write_covers_for(volume_ids: list[str]) -> None:
         "CREATE TABLE IF NOT EXISTS cover (volume_id TEXT PRIMARY KEY, text TEXT, digest_line TEXT,"
         " model TEXT, at TEXT, edited INTEGER DEFAULT 0);"
     )
-    client = InferenceClient()
     for volume_id in volume_ids:
         row = db.execute("SELECT title, publisher, edition, format FROM volume WHERE id = ?", (volume_id,)).fetchone()
         if row is None:
@@ -208,13 +198,13 @@ def write_covers_for(volume_ids: list[str]) -> None:
         toc = toc_of(volume_id, fmt, db)
         body = first_pages(volume_id, db)
         user = f"Title: {title}\nPublisher: {publisher}\nEdition: {edition}\n\nTable of contents:\n{toc}\n\nFirst pages:\n{body}"
-        text = clean(ask(client, COVER_PROMPT, user))
+        text = clean(ask(COVER_PROMPT, user))
         if check(text):
-            text = clean(ask(client, COVER_PROMPT + " Do not repeat the mistakes of a first draft that used banned words.", user))
+            text = clean(ask(COVER_PROMPT + " Do not repeat the mistakes of a first draft that used banned words.", user))
         (VOLUMES_DIR / volume_id / "cover.md").write_text(text + "\n")
-        digest = clean(ask(client, DIGEST_PROMPT, f"Cover text:\n{text}\n\nStored questions: none.", max_tokens=80))
+        digest = clean(ask(DIGEST_PROMPT, f"Cover text:\n{text}\n\nStored questions: none.", max_tokens=80))
         db.execute(
             "INSERT OR REPLACE INTO cover VALUES (?,?,?,?,?,?)",
-            (volume_id, text, digest, MODEL, datetime.now(timezone.utc).isoformat(timespec="seconds"), 0),
+            (volume_id, text, digest, provider.endpoint("small").name, datetime.now(timezone.utc).isoformat(timespec="seconds"), 0),
         )
         db.commit()

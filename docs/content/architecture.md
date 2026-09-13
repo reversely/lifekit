@@ -36,6 +36,7 @@ graph LR
   lifekit_library_loop --> lifekit_library_tags
   lifekit_library_loop --> lifekit_packs
   lifekit_library_pages["library.pages"]
+  lifekit_library_provider["library.provider"]
   lifekit_library_query["library.query"]
   lifekit_library_query --> lifekit_library_build
   lifekit_library_render["library.render"]
@@ -110,6 +111,7 @@ graph LR
 ## API routes (lifekit/api.py)
 
 - `GET /api/health`
+- `GET /api/config`
 - `GET /api/search`
 - `POST /api/answer`
 - `POST /api/questions`

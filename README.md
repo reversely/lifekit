@@ -18,14 +18,28 @@ file carries its source and licence.
 
 Ported from the [flux] LifeKit app.
 
+## Run an instance on a box
+
+One command brings up an instance next to a local model endpoint and serves the app on
+port 8008 (`docs/content/deployments-and-approval.md`):
+
+```
+git clone https://github.com/reversely/lifekit && cd lifekit
+LIFEKIT_MODEL_SMALL=openai:http://localhost:30081/v1:nvidia/nemotron-nano-9b-v2 bash scripts/box_up.sh
+```
+
+`LIFEKIT_MODEL_SMALL` and `LIFEKIT_MODEL_ANSWER` take `openai:<base_url>:<model>` for an
+OpenAI-compatible server or `hf:<model>` for Hugging Face inference. `LIFEKIT_LOOP=off`
+keeps stored questions from being worked, as on the public Space.
+
 ## Develop
 
 ```
 uv sync --all-groups
 uv run python -m lifekit.library.fetch <shelf>     # download a shelf's volumes
 uv run python -m lifekit.library.build             # packs/library.sqlite
-uv run uvicorn lifekit.api:app --port 8008         # the API the web app calls
-cd web && npm install && npm run dev               # the Svelte app
+uv run uvicorn lifekit.api:app --port 8008         # the API, plus web/dist when built
+cd web && npm install && npm run dev               # the Svelte app with live reload
 ```
 
 `packs/` holds the working copy of the dataset repo and stays out of this repo's git.

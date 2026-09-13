@@ -5,6 +5,7 @@ functions mount beside Gradio.
 
 Endpoints
   GET  /api/health
+  GET  /api/config                     model endpoints and whether the loop runs
   GET  /api/search?q=&tag=            passages and matching volumes from the library
   POST /api/answer  {question, tag}   model answer that quotes passages, or a stored question
   POST /api/questions {text}          store a question (the client is offline, or nothing answered)
@@ -21,7 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from lifekit.library import loop
+from lifekit.library import loop, provider
 from lifekit.library.build import DB_PATH, connect
 from lifekit.library.query import search, volumes_matching
 
@@ -36,11 +37,7 @@ def db():
 
 
 def _ask(system: str, user: str, max_tokens: int = 250) -> str:
-    from huggingface_hub import InferenceClient
-
-    from lifekit.library.covers import ask
-
-    return ask(InferenceClient(), system, user, max_tokens=max_tokens)
+    return provider.ask(system, user, max_tokens=max_tokens)
 
 
 def _answer(connection, question: str, tag: str | None = None):
@@ -50,7 +47,7 @@ def _answer(connection, question: str, tag: str | None = None):
     if not hits:
         return "", []
     passages = "\n\n".join(f"[{h['title']}, {h['edition']}, page {h['number']}]\n{h['text']}" for h in hits)
-    return _ask(ANSWER_PROMPT, f"Question: {question}\n\nPassages:\n{passages}"), hits
+    return provider.ask(ANSWER_PROMPT, f"Question: {question}\n\nPassages:\n{passages}", max_tokens=250, kind="answer"), hits
 
 
 def _cover(volume_id: str) -> None:
@@ -73,6 +70,11 @@ def health():
     connection = db()
     n = connection.execute("SELECT count(*) FROM volume WHERE page_count > 0").fetchone()[0]
     return {"ok": True, "volumes": n}
+
+
+@app.get("/api/config")
+def api_config():
+    return provider.describe()
 
 
 @app.get("/api/search")
@@ -101,6 +103,8 @@ def api_store(body: Stored):
 @app.post("/api/sync")
 def api_sync():
     connection = db()
+    if not provider.loop_enabled():
+        return {"digest": [], "events": ["The loop is off on this instance."], "pending": loop.pending(connection)}
     events: list[str] = []
     digest = loop.work(connection, _ask, _answer, covers=_cover, log=events.append)
     return {"digest": digest, "events": events, "pending": loop.pending(connection)}
@@ -125,3 +129,21 @@ def api_digest():
 @app.get("/api/library.sqlite")
 def api_db():
     return FileResponse(Path(DB_PATH), media_type="application/octet-stream")
+
+
+# The built web app, when present, so one process serves an instance. The SQLite
+# wasm needs cross-origin isolation, hence the two headers on every response.
+WEB_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
+if WEB_DIST.is_dir():
+    from starlette.middleware.base import BaseHTTPMiddleware
+    from starlette.staticfiles import StaticFiles
+
+    class _Isolation(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            response = await call_next(request)
+            response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+            response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+            return response
+
+    app.add_middleware(_Isolation)
+    app.mount("/", StaticFiles(directory=WEB_DIST, html=True), name="web")
