@@ -1,4 +1,0 @@
-gradio>=6.24
-huggingface-hub>=0.25
-pillow>=10
-pypdfium2>=4

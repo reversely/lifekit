@@ -12,9 +12,6 @@ graph LR
   lifekit_api --> lifekit_library_build
   lifekit_api --> lifekit_library_covers
   lifekit_api --> lifekit_library_query
-  lifekit_corpus["corpus"]
-  lifekit_corpus --> lifekit_packs
-  lifekit_corpus --> lifekit_reference
   lifekit_library_architecture["library.architecture"]
   lifekit_library_build["library.build"]
   lifekit_library_build --> lifekit_library_fetch
@@ -51,8 +48,6 @@ graph LR
   lifekit_library_tags --> lifekit_library_fetch
   lifekit_packs["packs"]
   lifekit_reference["reference"]
-  lifekit_reference --> lifekit_packs
-  lifekit_walks["walks"]
 ```
 
 ## Web app: screens over the shared core

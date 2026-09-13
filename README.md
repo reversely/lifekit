@@ -3,31 +3,29 @@ title: LifeKit
 emoji: 🧭
 colorFrom: green
 colorTo: gray
-sdk: gradio
-sdk_version: 6.24.0
-app_file: app.py
-pinned: false
 license: mit
 ---
 
 # LifeKit
 
-Field answers with the source line behind them. A walk asks short questions with tappable
-answers, then gives the implication first, the quoted source second, and a page link third.
-The pack (FM 21-76, NOAA normals, guide figures) ships in the
+A library of open survival documents that the app downloads, cuts into pages and passages,
+indexes for full-text search, describes with a generated cover, and files into twelve
+binders. Search quotes the page it found. A question the library cannot answer is stored,
+worked when the reader is back online, and answered in a digest with the quoted passage
+and its page. The pack ships in the
 [lifekit-packs](https://huggingface.co/datasets/reversely/lifekit-packs) dataset, and every
-asset carries its source and license in the manifest.
+file carries its source and licence.
 
-Ported from the [flux] LifeKit app. Phase 1 runs without a GPU; phase 2 adds
-Cosmos-Reason2-8B on ZeroGPU for clip reading, trail summarize and ask, and generated
-answers that quote retrieved passages.
+Ported from the [flux] LifeKit app.
 
 ## Develop
 
 ```
 uv sync --all-groups
-uv run pytest
-uv run python app.py
+uv run python -m lifekit.library.fetch <shelf>     # download a shelf's volumes
+uv run python -m lifekit.library.build             # packs/library.sqlite
+uv run uvicorn lifekit.api:app --port 8008         # the API the web app calls
+cd web && npm install && npm run dev               # the Svelte app
 ```
 
 `packs/` holds the working copy of the dataset repo and stays out of this repo's git.
