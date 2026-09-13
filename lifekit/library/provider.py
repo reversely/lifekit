@@ -8,6 +8,10 @@ section, cover, digest line) and LIFEKIT_MODEL_ANSWER for answers. Each takes on
 
 The answer setting falls back to the small one, and the small one falls back to the
 Llama 3.1 8B stand-in on Hugging Face inference.
+
+Reasoning models (Nemotron 3 Nano under Ollama, for one) think by default and spend the
+whole token budget before writing an answer, so an OpenAI-style request asks for no
+reasoning unless LIFEKIT_MODEL_THINKING=on.
 """
 
 import os
@@ -60,11 +64,10 @@ def ask(system: str, user: str, max_tokens: int = 300, kind: str = "small") -> s
     if target.scheme == "openai":
         import httpx
 
-        response = httpx.post(
-            f"{target.base_url}/chat/completions",
-            json={"model": target.model, "messages": messages, "max_tokens": max_tokens, "temperature": 0.2},
-            timeout=120,
-        )
+        body = {"model": target.model, "messages": messages, "max_tokens": max_tokens, "temperature": 0.2}
+        if os.environ.get("LIFEKIT_MODEL_THINKING", "off").lower() != "on":
+            body["reasoning_effort"] = "none"
+        response = httpx.post(f"{target.base_url}/chat/completions", json=body, timeout=300)
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"].strip()
     from huggingface_hub import InferenceClient

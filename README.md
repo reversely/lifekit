@@ -25,7 +25,8 @@ port 8008 (`docs/content/deployments-and-approval.md`):
 
 ```
 git clone https://github.com/reversely/lifekit && cd lifekit
-LIFEKIT_MODEL_SMALL=openai:http://localhost:30081/v1:nvidia/nemotron-nano-9b-v2 bash scripts/box_up.sh
+ollama pull nemotron-3-nano
+bash scripts/box_up.sh
 ```
 
 `LIFEKIT_MODEL_SMALL` and `LIFEKIT_MODEL_ANSWER` take `openai:<base_url>:<model>` for an

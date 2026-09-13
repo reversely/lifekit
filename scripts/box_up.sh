@@ -5,15 +5,15 @@
 #   bash scripts/box_up.sh            # environment, library, web build, serve on :8008
 #   bash scripts/box_up.sh --no-serve # everything except starting the server
 #
-# Settings (defaults suit the GN100 with the Nano NIM on port 30081):
-#   LIFEKIT_MODEL_SMALL   openai:http://localhost:30081/v1:nvidia/nemotron-nano-9b-v2
+# Settings (defaults suit a box running Ollama with nemotron-3-nano; a NIM works the same way):
+#   LIFEKIT_MODEL_SMALL   openai:http://localhost:11434/v1:nemotron-3-nano
 #   LIFEKIT_MODEL_ANSWER  same as small unless set
 #   LIFEKIT_LOOP          on
 #   LIFEKIT_PORT          8008
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-export LIFEKIT_MODEL_SMALL="${LIFEKIT_MODEL_SMALL:-openai:http://localhost:30081/v1:nvidia/nemotron-nano-9b-v2}"
+export LIFEKIT_MODEL_SMALL="${LIFEKIT_MODEL_SMALL:-openai:http://localhost:11434/v1:nemotron-3-nano}"
 export LIFEKIT_LOOP="${LIFEKIT_LOOP:-on}"
 PORT="${LIFEKIT_PORT:-8008}"
 
