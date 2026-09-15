@@ -131,6 +131,8 @@ def evaluate(db, profile: dict) -> list[dict]:
             continue
         if not matches(predicate, profile):
             continue
+        if any(f"{{{k}}}" in rule["question"] and not profile.get(k) for k in ("region", "country", "trips")):
+            continue  # the answer that fills the question is not given yet
         text = _fill(rule["question"], profile)
         qid = store_question(db, text, profile, origin=origin, topic=None, wanted=_fill(rule.get("reason", ""), profile) or None)
         seeded.append({"id": qid, "text": text, "reason": _fill(rule.get("reason", ""), profile), "rule": rule["id"]})

@@ -18,6 +18,7 @@ graph LR
   lifekit_library_build --> lifekit_library_pages
   lifekit_library_build --> lifekit_library_segment
   lifekit_library_build --> lifekit_library_tags
+  lifekit_library_build --> lifekit_library_verdicts
   lifekit_library_build --> lifekit_packs
   lifekit_library_build --> lifekit_reference
   lifekit_library_covers["library.covers"]
@@ -34,8 +35,12 @@ graph LR
   lifekit_library_loop --> lifekit_library_query
   lifekit_library_loop --> lifekit_library_segment
   lifekit_library_loop --> lifekit_library_tags
+  lifekit_library_loop --> lifekit_library_verdicts
   lifekit_library_loop --> lifekit_packs
   lifekit_library_pages["library.pages"]
+  lifekit_library_profile["library.profile"]
+  lifekit_library_profile --> lifekit_library_loop
+  lifekit_library_profile --> lifekit_packs
   lifekit_library_provider["library.provider"]
   lifekit_library_query["library.query"]
   lifekit_library_query --> lifekit_library_build
@@ -47,6 +52,10 @@ graph LR
   lifekit_library_tags["library.tags"]
   lifekit_library_tags --> lifekit_library_build
   lifekit_library_tags --> lifekit_library_fetch
+  lifekit_library_verdicts["library.verdicts"]
+  lifekit_library_verdicts --> lifekit_library_fetch
+  lifekit_library_verdicts --> lifekit_library_tags
+  lifekit_library_verdicts --> lifekit_packs
   lifekit_packs["packs"]
   lifekit_reference["reference"]
 ```
@@ -61,14 +70,18 @@ graph LR
   App_svelte --> lib_core_net_ts
   App_svelte --> lib_screens_Digest_svelte
   App_svelte --> lib_screens_Library_svelte
+  App_svelte --> lib_screens_Profile_svelte
   App_svelte --> lib_screens_Recent_svelte
   App_svelte --> lib_screens_Search_svelte
   App_svelte --> lib_screens_Section_svelte
   App_svelte --> lib_screens_Volume_svelte
+  App_svelte --> lib_screens_Welcome_svelte
   lib_Card_svelte["lib/Card.svelte"]
   lib_Card_svelte --> lib_core_types_ts
   lib_Chips_svelte["lib/Chips.svelte"]
   lib_Chips_svelte --> lib_core_types_ts
+  lib_ProfileSteps_svelte["lib/ProfileSteps.svelte"]
+  lib_ProfileSteps_svelte --> lib_core_api_ts
   lib_core_api_ts["lib/core/api.ts"]
   lib_core_db_ts["lib/core/db.ts"]
   lib_core_net_ts["lib/core/net.ts"]
@@ -80,8 +93,12 @@ graph LR
   lib_screens_Digest_svelte --> lib_core_api_ts
   lib_screens_Digest_svelte --> lib_core_net_ts
   lib_screens_Library_svelte["lib/screens/Library.svelte"]
+  lib_screens_Library_svelte --> lib_core_api_ts
   lib_screens_Library_svelte --> lib_core_db_ts
   lib_screens_Library_svelte --> lib_core_queries_ts
+  lib_screens_Profile_svelte["lib/screens/Profile.svelte"]
+  lib_screens_Profile_svelte --> lib_ProfileSteps_svelte
+  lib_screens_Profile_svelte --> lib_core_api_ts
   lib_screens_Recent_svelte["lib/screens/Recent.svelte"]
   lib_screens_Recent_svelte --> lib_Card_svelte
   lib_screens_Recent_svelte --> lib_Chips_svelte
@@ -101,9 +118,13 @@ graph LR
   lib_screens_Section_svelte --> lib_core_queries_ts
   lib_screens_Section_svelte --> lib_core_types_ts
   lib_screens_Volume_svelte["lib/screens/Volume.svelte"]
+  lib_screens_Volume_svelte --> lib_core_api_ts
   lib_screens_Volume_svelte --> lib_core_db_ts
   lib_screens_Volume_svelte --> lib_core_queries_ts
   lib_screens_Volume_svelte --> lib_core_types_ts
+  lib_screens_Welcome_svelte["lib/screens/Welcome.svelte"]
+  lib_screens_Welcome_svelte --> lib_ProfileSteps_svelte
+  lib_screens_Welcome_svelte --> lib_core_api_ts
   main_ts["main.ts"]
   main_ts --> App_svelte
 ```
@@ -116,8 +137,12 @@ graph LR
 - `POST /api/answer`
 - `POST /api/questions`
 - `POST /api/sync`
+- `GET /api/profile`
+- `GET /api/candidates`
+- `POST /api/verdict`
 - `GET /api/digest`
 - `GET /api/library.sqlite`
+- `GET /library.sqlite`
 
 ## Tables (packs/library.sqlite)
 
@@ -126,6 +151,7 @@ graph LR
 - `page`
 - `passage`
 - `passage_fts`
+- `profile`
 - `provenance`
 - `question`
 - `rag_test`

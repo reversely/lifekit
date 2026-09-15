@@ -177,8 +177,11 @@ def api_digest():
 
 
 @app.get("/api/library.sqlite")
+@app.get("/library.sqlite")
 def api_db():
-    return FileResponse(Path(DB_PATH), media_type="application/octet-stream")
+    """The live database. The app fetches /library.sqlite, so this route must
+    precede the static mount or the build's copy would answer instead."""
+    return FileResponse(Path(DB_PATH), media_type="application/octet-stream", headers={"Cache-Control": "no-store"})
 
 
 # The built web app, when present, so one process serves an instance. The SQLite
