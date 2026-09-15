@@ -89,7 +89,7 @@ def _search(db: sqlite3.Connection, query: str, limit: int) -> list[dict]:
         " v.id, v.title, v.edition, sv.role"
         " FROM passage_fts f JOIN passage s ON s.id = f.passage_id JOIN page p ON p.id = s.page_id"
         " JOIN volume v ON v.id = p.volume_id JOIN shelf_volume sv ON sv.volume_id = v.id"
-        " WHERE passage_fts MATCH ? ORDER BY score LIMIT 60",
+        " WHERE passage_fts MATCH ? AND v.admission != 'rejected' ORDER BY score LIMIT 60",
         (query,),
     ).fetchall()
     results = []
@@ -113,7 +113,7 @@ def volumes_matching(db: sqlite3.Connection, question: str, limit: int = 3) -> l
     params = [p for w in words for p in (f"%{w}%", f"%{w}%")]
     rows = db.execute(
         "SELECT v.id, v.title, v.edition, c.text FROM volume v LEFT JOIN cover c ON c.volume_id = v.id"
-        f" WHERE v.carry = 'carry' AND ({like}) LIMIT ?", (*params, limit)
+        f" WHERE v.carry = 'carry' AND v.admission != 'rejected' AND ({like}) LIMIT ?", (*params, limit)
     ).fetchall()
     return [{"volume": r[0], "title": r[1], "edition": r[2], "cover": r[3]} for r in rows]
 

@@ -25,7 +25,12 @@ CREATE TABLE IF NOT EXISTS volume (
     page_count INTEGER,
     freshness TEXT DEFAULT 'static',
     live_source TEXT,
-    superseded_by TEXT
+    superseded_by TEXT,
+    -- docs/content/deployments-and-approval.md 3.1: stock from a shelf list; staged by the
+    -- loop awaiting the owner's verdict; admitted; rejected (hidden from search).
+    admission TEXT NOT NULL DEFAULT 'stock' CHECK (admission IN ('stock', 'staged', 'admitted', 'rejected')),
+    admitted_at TEXT,
+    admitted_by TEXT
 );
 
 CREATE TABLE IF NOT EXISTS shelf_volume (
@@ -42,11 +47,7 @@ CREATE TABLE IF NOT EXISTS page (
     number INTEGER,
     anchor TEXT,
     text TEXT NOT NULL,
-    render TEXT,
-    audit TEXT NOT NULL DEFAULT 'unaudited',
-    audit_by TEXT,
-    audit_at TEXT,
-    audit_note TEXT
+    render TEXT
 );
 
 CREATE TABLE IF NOT EXISTS passage (
@@ -93,6 +94,8 @@ CREATE TABLE IF NOT EXISTS volume_tag (
 );
 
 -- Stored questions and the digest the loop writes (docs/content/library-schema.md 1.9).
+-- topic and wanted form the gap record (deployments-and-approval.md 2); origin says who
+-- asked: 'asked' for the reader, or the pull rule id that seeded it from the profile.
 CREATE TABLE IF NOT EXISTS question (
     id TEXT PRIMARY KEY,
     text TEXT NOT NULL,
@@ -100,7 +103,20 @@ CREATE TABLE IF NOT EXISTS question (
     asked_at TEXT,
     state TEXT NOT NULL DEFAULT 'stored',
     topic TEXT,
+    wanted TEXT,
+    origin TEXT NOT NULL DEFAULT 'asked',
     answer_passages TEXT
+);
+-- One household per instance: the owner's answers, one row, json per column.
+CREATE TABLE IF NOT EXISTS profile (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    country TEXT,
+    region TEXT,
+    terrain TEXT DEFAULT '[]',
+    activities TEXT DEFAULT '["home"]',
+    household TEXT DEFAULT '["adult"]',
+    trips TEXT DEFAULT '[]',
+    updated_at TEXT
 );
 CREATE TABLE IF NOT EXISTS digest (
     question_id TEXT PRIMARY KEY,

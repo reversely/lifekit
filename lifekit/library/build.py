@@ -17,6 +17,7 @@ from .fetch import VOLUMES_DIR, read_volumes
 from .pages import html_pages, pdf_pages
 from .segment import segment
 from .tags import apply_tags
+from .verdicts import read_verdict
 
 DB_PATH = LOCAL_PACKS / "library.sqlite"
 SCHEMA = Path(__file__).with_name("schema.sql")
@@ -68,7 +69,7 @@ def build(shelves: list[str] | None = None, db_path: Path = DB_PATH) -> dict:
     kept: dict[str, list[tuple]] = {}
     if db_path.exists():
         old = connect(db_path)
-        for table in ("cover", "question", "digest"):
+        for table in ("cover", "question", "digest", "profile"):
             try:
                 kept[table] = old.execute(f"SELECT * FROM {table}").fetchall()
             except sqlite3.OperationalError:
@@ -120,6 +121,9 @@ def _load_volume(db, shelf, position, volume, counts) -> None:
     )
     if "tier:learned" in volume.get("tags", ""):
         db.execute("UPDATE volume SET tier = 'learned' WHERE id = ?", (volume["id"],))
+        verdict = read_verdict(volume["id"])
+        db.execute("UPDATE volume SET admission = ?, admitted_at = ?, admitted_by = ? WHERE id = ?",
+                   (verdict.get("admission", "staged"), verdict.get("at"), verdict.get("by"), volume["id"]))
     db.execute(
         "INSERT INTO shelf_volume VALUES (?,?,?,?)", (shelf, volume["id"], position, volume["role"])
     )

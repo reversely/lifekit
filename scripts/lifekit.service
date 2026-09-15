@@ -1,0 +1,20 @@
+# LifeKit instance as a systemd service. Install on a box as root:
+#   cp scripts/lifekit.service /etc/systemd/system/lifekit.service
+#   systemctl daemon-reload && systemctl enable --now lifekit
+# Settings come from <repo>/.env.box (LIFEKIT_MODEL_SMALL, LIFEKIT_LOOP, LIFEKIT_PORT).
+[Unit]
+Description=LifeKit library, API, and web app
+After=network-online.target ollama.service
+Wants=network-online.target
+
+[Service]
+User=springbuilt
+WorkingDirectory=/home/springbuilt/lifekit
+EnvironmentFile=-/home/springbuilt/lifekit/.env.box
+Environment=PATH=/home/springbuilt/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/bin/bash scripts/box_up.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

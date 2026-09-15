@@ -12,6 +12,10 @@ Endpoints
   POST /api/sync                       work stored questions: name, find, pull, re-ask
   GET  /api/digest                     what arrived and what got answered, newest first
   GET  /api/library.sqlite             the current database, for the app to (re)load
+  GET  /api/profile                    the household profile and the onboarding questions
+  PUT  /api/profile {answers}          save answers; pull rules seed questions for the loop
+  GET  /api/candidates                 staged additions awaiting a verdict
+  POST /api/verdict {volume, verdict, section?}   admit, refile, or reject one addition
 """
 
 import json
@@ -22,7 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from lifekit.library import loop, provider
+from lifekit.library import loop, profile as profiles, provider, verdicts
 from lifekit.library.build import DB_PATH, connect
 from lifekit.library.query import search, volumes_matching
 
@@ -65,6 +69,21 @@ class Stored(BaseModel):
     text: str
 
 
+class Answers(BaseModel):
+    country: str | None = None
+    region: str | None = None
+    terrain: list[str] | None = None
+    activities: list[str] | None = None
+    household: list[str] | None = None
+    trips: list[str] | None = None
+
+
+class Verdict(BaseModel):
+    volume: str
+    verdict: str
+    section: str | None = None
+
+
 @app.get("/api/health")
 def health():
     connection = db()
@@ -90,8 +109,9 @@ def api_answer(body: Question):
 
     text, hits = _answer(connection, body.question, body.tag)
     if not hits or not covered(text):
-        qid = loop.store_question(connection, body.question)
-        return {"answered": False, "stored": qid, "hits": hits, "note": strip_verdict(text)}
+        topic, wanted = loop.gap_record(_ask, body.question) if provider.loop_enabled() else (None, None)
+        qid = loop.store_question(connection, body.question, profiles.get(connection), topic=topic, wanted=wanted)
+        return {"answered": False, "stored": qid, "hits": hits, "note": strip_verdict(text), "topic": topic, "wanted": wanted}
     return {"answered": True, "answer": strip_verdict(text), "hits": hits[:3]}
 
 
@@ -110,6 +130,34 @@ def api_sync():
     return {"digest": digest, "events": events, "pending": loop.pending(connection)}
 
 
+@app.get("/api/profile")
+def api_profile():
+    connection = db()
+    current = profiles.get(connection)
+    return {"profile": current, "questions": profiles.questions(current), "summary": profiles.describe(current)}
+
+
+@app.put("/api/profile")
+def api_profile_save(body: Answers):
+    connection = db()
+    saved = profiles.save(connection, {k: v for k, v in body.model_dump().items() if v is not None})
+    seeded = profiles.evaluate(connection, saved)
+    return {"profile": saved, "questions": profiles.questions(saved), "summary": profiles.describe(saved), "seeded": seeded}
+
+
+@app.get("/api/candidates")
+def api_candidates():
+    return {"candidates": loop.candidates(db())}
+
+
+@app.post("/api/verdict")
+def api_verdict(body: Verdict):
+    try:
+        return verdicts.apply(db(), body.volume, body.verdict, body.section)
+    except (ValueError, KeyError) as error:
+        return {"error": str(error)}
+
+
 @app.get("/api/digest")
 def api_digest():
     connection = db()
@@ -117,12 +165,14 @@ def api_digest():
         "SELECT d.question_id, q.text, d.answer, d.volumes, d.at, q.state FROM digest d JOIN question q ON q.id = d.question_id ORDER BY d.at DESC LIMIT 20"
     ).fetchall()
     added = connection.execute(
-        "SELECT v.id, v.title, v.publisher, v.retrieved, c.digest_line FROM volume v LEFT JOIN cover c ON c.volume_id = v.id"
-        " WHERE v.tier = 'learned' ORDER BY v.retrieved DESC LIMIT 20"
+        "SELECT v.id, v.title, v.publisher, v.retrieved, c.digest_line, v.admission FROM volume v LEFT JOIN cover c ON c.volume_id = v.id"
+        " WHERE v.tier = 'learned' AND v.admission != 'rejected' ORDER BY v.retrieved DESC LIMIT 20"
     ).fetchall()
     return {
         "answered": [{"id": r[0], "question": r[1], "answer": r[2], "volumes": json.loads(r[3] or "[]"), "at": r[4], "state": r[5]} for r in rows],
-        "added": [{"id": r[0], "title": r[1], "publisher": r[2], "retrieved": r[3], "line": r[4]} for r in added],
+        "added": [{"id": r[0], "title": r[1], "publisher": r[2], "retrieved": r[3], "line": r[4], "admission": r[5]} for r in added],
+        "candidates": loop.candidates(connection),
+        "pending": loop.pending(connection),
     }
 
 

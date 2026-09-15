@@ -20,6 +20,7 @@ from .fetch import UA, VOLUMES_DIR
 from .pages import html_pages
 from .segment import segment
 from .tags import apply_tags
+from .verdicts import filing_examples, rejected_ids
 
 WIKI_SEARCH = "https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&srlimit=3&srsearch="
 WIKI_PAGE = "https://en.wikipedia.org/wiki/"
@@ -50,14 +51,59 @@ def _get(url: str, timeout: int = 60) -> bytes:
 
 # -- questions -----------------------------------------------------------------
 
-def store_question(db: sqlite3.Connection, text: str, profile: dict | None = None) -> str:
+GAP_PROMPT = (
+    "A question could not be answered from a library of documents. Write two lines. "
+    "Line 1: 'Topic: ' then the topic in one to four words, as a noun phrase a librarian would "
+    "file it under. Line 2: 'Wanted: ' then one sentence naming the kind of document that would "
+    "answer it (for example: a first aid guideline on insect stings). Output the two lines only."
+)
+
+
+def store_question(db: sqlite3.Connection, text: str, profile: dict | None = None,
+                   origin: str = "asked", topic: str | None = None, wanted: str | None = None) -> str:
     qid = "q_" + hashlib.sha1((text + now()).encode()).hexdigest()[:10]
     db.execute(
-        "INSERT INTO question (id, text, profile_snapshot, asked_at, state) VALUES (?,?,?,?,?)",
-        (qid, text, json.dumps(profile or {}), now(), "stored"),
+        "INSERT INTO question (id, text, profile_snapshot, asked_at, state, origin, topic, wanted) VALUES (?,?,?,?,?,?,?,?)",
+        (qid, text, json.dumps(profile or {}), now(), "stored", origin, topic, wanted),
     )
     db.commit()
     return qid
+
+
+def gap_record(ask, text: str) -> tuple[str | None, str | None]:
+    """The model's own statement of what is missing: (topic, wanted)."""
+    try:
+        reply = ask(GAP_PROMPT, text)
+    except Exception:  # noqa: BLE001
+        return None, None
+    topic = wanted = None
+    for line in reply.splitlines():
+        low = line.strip().lower()
+        if low.startswith("topic:"):
+            topic = line.split(":", 1)[1].strip().strip('."').lower() or None
+        elif low.startswith("wanted:"):
+            wanted = line.split(":", 1)[1].strip() or None
+    return topic, wanted
+
+
+def candidates(db: sqlite3.Connection) -> list[dict]:
+    """Staged volumes with the question that pulled them and the answer they gave."""
+    out = []
+    for vid, title, publisher, licence, retrieved, cover in db.execute(
+        "SELECT v.id, v.title, v.publisher, v.licence, v.retrieved, c.text FROM volume v"
+        " LEFT JOIN cover c ON c.volume_id = v.id WHERE v.admission = 'staged' ORDER BY v.retrieved DESC"
+    ):
+        section = db.execute("SELECT shelf_id FROM shelf_volume WHERE volume_id = ?", (vid,)).fetchone()
+        prov = db.execute("SELECT derived_from FROM provenance WHERE entity_id = ? AND activity = 'pull'", (vid,)).fetchone()
+        qids = json.loads(prov[0]) if prov else []
+        question = None
+        if qids:
+            q = db.execute("SELECT q.id, q.text, q.wanted, q.state, d.answer FROM question q LEFT JOIN digest d ON d.question_id = q.id WHERE q.id = ?", (qids[0],)).fetchone()
+            if q:
+                question = {"id": q[0], "text": q[1], "wanted": q[2], "state": q[3], "answer": q[4]}
+        out.append({"id": vid, "title": title, "publisher": publisher, "licence": licence, "retrieved": retrieved,
+                    "cover": cover, "section": section[0] if section else None, "question": question})
+    return out
 
 
 def set_state(db, qid: str, state: str, **fields) -> None:
@@ -68,8 +114,8 @@ def set_state(db, qid: str, state: str, **fields) -> None:
 
 def pending(db) -> list[dict]:
     return [
-        {"id": r[0], "text": r[1], "state": r[2]}
-        for r in db.execute("SELECT id, text, state FROM question WHERE state NOT IN ('resolved', 'exhausted') ORDER BY asked_at")
+        {"id": r[0], "text": r[1], "state": r[2], "topic": r[3], "origin": r[4]}
+        for r in db.execute("SELECT id, text, state, topic, origin FROM question WHERE state NOT IN ('resolved', 'exhausted') ORDER BY asked_at")
     ]
 
 
@@ -88,6 +134,8 @@ def slug(text: str) -> str:
 def pull_wikipedia(db, candidate: dict, section: str, question_id: str) -> str:
     """Fetch one article, cut it, index it, tag it. Returns the volume id."""
     volume_id = f"wikipedia-{slug(candidate['title'])}"
+    if volume_id in rejected_ids():
+        raise RuntimeError(f"{volume_id}: rejected by the owner earlier")
     if db.execute("SELECT 1 FROM volume WHERE id = ? AND page_count > 0", (volume_id,)).fetchone():
         return volume_id  # already in the library; a pull is idempotent
     dest = VOLUMES_DIR / volume_id
@@ -112,6 +160,7 @@ def pull_wikipedia(db, candidate: dict, section: str, question_id: str) -> str:
          "CC-BY-SA-4.0", "Text is available under the Creative Commons Attribution-ShareAlike 4.0 License",
          "https://en.wikipedia.org/wiki/Wikipedia:Copyrights", retrieved, sha, "carry", "learned", "live"),
     )
+    db.execute("UPDATE volume SET admission = 'staged' WHERE id = ?", (volume_id,))
     order = db.execute("SELECT coalesce(max(\"order\"), 0) + 1 FROM shelf_volume WHERE shelf_id = ?", (section,)).fetchone()[0]
     db.execute("INSERT INTO shelf_volume VALUES (?,?,?,?)", (section, volume_id, order, "reference"))
     pages = html_pages(dest / "source.html", candidate["url"])
@@ -169,9 +218,10 @@ def work(db, ask, answer, covers=None, log=print) -> list[dict]:
     from .query import search
 
     digest = []
+    examples = "".join(f"\nExample: {q} -> {s}" for q, s in filing_examples())
     for q in pending(db):
         qid, text = q["id"], q["text"]
-        topic = ask(TOPIC_PROMPT, text).strip().strip('."').lower()
+        topic = q.get("topic") or ask(TOPIC_PROMPT, text).strip().strip('."').lower()
         if not topic or topic == "none":
             set_state(db, qid, "exhausted", topic=topic)
             log(f"{qid}: no topic")
@@ -183,7 +233,7 @@ def work(db, ask, answer, covers=None, log=print) -> list[dict]:
             log(f"{qid}: search failed {error}")
             continue
         set_state(db, qid, "searching")
-        said = ask(SECTION_PROMPT, f"Question: {text}\nTopic: {topic}").strip().lower()
+        said = ask(SECTION_PROMPT + examples, f"Question: {text}\nTopic: {topic}").strip().lower()
         section = next((s for s in sorted(SECTIONS, key=len, reverse=True) if s in said), "tools")
         pulled = []
         for candidate in candidates[:2]:
@@ -221,5 +271,15 @@ def ensure_tables(db) -> None:
         "CREATE TABLE IF NOT EXISTS question (id TEXT PRIMARY KEY, text TEXT NOT NULL, profile_snapshot TEXT,"
         " asked_at TEXT, state TEXT NOT NULL DEFAULT 'stored', topic TEXT, answer_passages TEXT);"
         "CREATE TABLE IF NOT EXISTS digest (question_id TEXT PRIMARY KEY, answer TEXT, volumes TEXT, at TEXT);"
+        "CREATE TABLE IF NOT EXISTS profile (id INTEGER PRIMARY KEY CHECK (id = 1), country TEXT, region TEXT,"
+        " terrain TEXT DEFAULT '[]', activities TEXT DEFAULT '[\"home\"]', household TEXT DEFAULT '[\"adult\"]',"
+        " trips TEXT DEFAULT '[]', updated_at TEXT);"
     )
+    # columns added after the first databases were built
+    for table, column, ddl in (
+        ("question", "wanted", "TEXT"), ("question", "origin", "TEXT NOT NULL DEFAULT 'asked'"),
+        ("volume", "admission", "TEXT NOT NULL DEFAULT 'stock'"), ("volume", "admitted_at", "TEXT"), ("volume", "admitted_by", "TEXT"),
+    ):
+        if column not in [c[1] for c in db.execute(f"PRAGMA table_info({table})")]:
+            db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
     db.commit()
