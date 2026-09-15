@@ -42,11 +42,11 @@ fi
 step "web build"
 if [ ! -f web/dist/index.html ]; then
   command -v npm >/dev/null || { echo "npm missing: install Node 20+ and rerun"; exit 1; }
-  (cd web && npm ci && cp ../packs/library.sqlite public/library.sqlite && npm run build)
+  (cd web && npm ci && npm run build)
 else
   echo "web/dist present"
 fi
-cp -f packs/library.sqlite web/dist/library.sqlite
+rm -f web/dist/library.sqlite  # the API serves the live database at /library.sqlite
 
 if [ "${1:-}" = "--no-serve" ]; then exit 0; fi
 step "serve on :$PORT"
