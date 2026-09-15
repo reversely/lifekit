@@ -22,7 +22,7 @@ from .segment import segment
 from .tags import apply_tags
 from .verdicts import filing_examples, rejected_ids
 
-WIKI_SEARCH = "https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&srlimit=3&srsearch="
+WIKI_SEARCH = "https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&srlimit=8&srsearch="
 WIKI_PAGE = "https://en.wikipedia.org/wiki/"
 SECTIONS = ["medicine", "shelter", "fire", "water", "food", "poisonous-plants", "animals",
             "tools", "direction", "signaling", "environments", "hazards"]
@@ -39,7 +39,15 @@ SECTION_PROMPT = (
     "food (storing, foraging, hunting, cooking); poisonous-plants; animals (bites, stings, "
     "encounters); tools (knots, cordage, hand tools, repairs, equipment); direction (maps, "
     "compass, GPS, stars); signaling (rescue, radio, beacons); environments (weather, heat, cold, "
-    "sea); hazards (radiation, chemical, pandemic, outages). Output the section id only."
+    "sea); hazards (radiation, chemical, pandemic, outages). Output one section id from that "
+    "list and nothing else. Example: Question: how to remove a tick. Topic: ticks. Output: animals"
+)
+PICK_PROMPT = (
+    "A question needs a document. You are given numbered Wikipedia article titles from a search. "
+    "Output the numbers of the articles whose subject would answer the question, best first, at "
+    "most two, separated by commas. Prefer a general article about the subject over an article "
+    "about one event, person, place, or work. If none would answer it, output none. Output only "
+    "the numbers or the word none."
 )
 
 
@@ -210,6 +218,35 @@ def _record_learned(section: str, volume_id: str, candidate: dict, retrieved: st
         })
 
 
+def pick(ask, question: str, candidates: list[dict]) -> list[dict]:
+    """The model chooses which search hits would answer the question, at most two."""
+    if not candidates:
+        return []
+    listing = "\n".join(f"{i + 1}. {c['title']}" for i, c in enumerate(candidates))
+    said = ask(PICK_PROMPT, f"Question: {question}\n\nArticles:\n{listing}").strip().lower()
+    if said.startswith("none"):
+        return []
+    chosen = []
+    for token in re.findall(r"\d+", said):
+        index = int(token) - 1
+        if 0 <= index < len(candidates) and candidates[index] not in chosen:
+            chosen.append(candidates[index])
+    return chosen[:2] or candidates[:1]
+
+
+def choose_section(ask, prompt: str, question: str, topic: str) -> str:
+    """One section id; a reply that names none gets one stricter retry, then tools."""
+    for attempt in range(2):
+        user = f"Question: {question}\nTopic: {topic}"
+        if attempt:
+            user += "\nAnswer with exactly one of: " + ", ".join(SECTIONS)
+        said = ask(prompt, user).strip().lower()
+        hit = next((s for s in sorted(SECTIONS, key=len, reverse=True) if s in said), None)
+        if hit:
+            return hit
+    return "tools"
+
+
 # -- the pass ------------------------------------------------------------------
 
 def work(db, ask, answer, covers=None, log=print) -> list[dict]:
@@ -233,8 +270,12 @@ def work(db, ask, answer, covers=None, log=print) -> list[dict]:
             log(f"{qid}: search failed {error}")
             continue
         set_state(db, qid, "searching")
-        said = ask(SECTION_PROMPT + examples, f"Question: {text}\nTopic: {topic}").strip().lower()
-        section = next((s for s in sorted(SECTIONS, key=len, reverse=True) if s in said), "tools")
+        candidates = pick(ask, text, candidates)
+        if not candidates:
+            set_state(db, qid, "exhausted")
+            log(f"{qid}: no article fits")
+            continue
+        section = choose_section(ask, SECTION_PROMPT + examples, text, topic)
         pulled = []
         for candidate in candidates[:2]:
             try:

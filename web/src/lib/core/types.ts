@@ -19,6 +19,7 @@ export interface Volume {
   retrieved: string;
   cover: string;
   digestLine: string;
+  admission: 'stock' | 'staged' | 'admitted' | 'rejected';
   tags: Tag[];
 }
 

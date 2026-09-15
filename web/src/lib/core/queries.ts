@@ -17,7 +17,7 @@ export function shelves(db: Database): Shelf[] {
   const counts = new Map(
     rows<{ tag: string; n: number }>(
       db,
-      "SELECT t.tag AS tag, count(*) AS n FROM volume_tag t JOIN volume v ON v.id = t.volume_id WHERE v.carry = 'carry' AND v.page_count > 0 AND t.tag LIKE 'section:%' GROUP BY t.tag",
+      "SELECT t.tag AS tag, count(*) AS n FROM volume_tag t JOIN volume v ON v.id = t.volume_id WHERE v.carry = 'carry' AND v.page_count > 0 AND v.admission != 'rejected' AND t.tag LIKE 'section:%' GROUP BY t.tag",
     ).map((r) => [r.tag, r.n]),
   );
   return SECTIONS.map((s, i) => ({
@@ -44,8 +44,8 @@ export function volumes(db: Database, opts: { tag?: string; sort?: SortKey } = {
   const where = opts.tag ? ' AND v.id IN (SELECT volume_id FROM volume_tag WHERE tag = ?)' : '';
   const list = rows<any>(
     db,
-    `SELECT v.id, v.title, v.publisher, v.edition, v.format, v.licence, v.page_count, v.retrieved, c.text AS cover, c.digest_line
-     FROM volume v LEFT JOIN cover c ON c.volume_id = v.id WHERE v.carry = 'carry' AND v.page_count > 0${where} ORDER BY ${SORT_SQL[opts.sort ?? 'latest']}`,
+    `SELECT v.id, v.title, v.publisher, v.edition, v.format, v.licence, v.page_count, v.retrieved, v.admission, c.text AS cover, c.digest_line
+     FROM volume v LEFT JOIN cover c ON c.volume_id = v.id WHERE v.carry = 'carry' AND v.page_count > 0 AND v.admission != 'rejected'${where} ORDER BY ${SORT_SQL[opts.sort ?? 'latest']}`,
     opts.tag ? [opts.tag] : [],
   );
   return list.map((r) => ({
@@ -59,6 +59,7 @@ export function volumes(db: Database, opts: { tag?: string; sort?: SortKey } = {
     retrieved: r.retrieved ?? '',
     cover: r.cover ?? '',
     digestLine: r.digest_line ?? '',
+    admission: r.admission ?? 'stock',
     tags: tagsOf(db, r.id),
   }));
 }
@@ -68,7 +69,7 @@ export function tagCounts(db: Database, within?: string): TagCount[] {
   const scope = within ? ' AND v.id IN (SELECT volume_id FROM volume_tag WHERE tag = ?)' : '';
   const counts = rows<{ tag: string; n: number }>(
     db,
-    `SELECT t.tag AS tag, count(*) AS n FROM volume_tag t JOIN volume v ON v.id = t.volume_id WHERE v.carry = 'carry' AND v.page_count > 0${scope} GROUP BY t.tag ORDER BY n DESC, t.tag`,
+    `SELECT t.tag AS tag, count(*) AS n FROM volume_tag t JOIN volume v ON v.id = t.volume_id WHERE v.carry = 'carry' AND v.page_count > 0 AND v.admission != 'rejected'${scope} GROUP BY t.tag ORDER BY n DESC, t.tag`,
     within ? [`section:${within}`] : [],
   );
   const byTag = new Map(counts.map((c) => [c.tag, c.n]));
@@ -112,7 +113,7 @@ export function search(db: Database, question: string, opts: { tag?: string; lim
               v.id AS volume, v.title, v.edition, sv.role
        FROM passage_fts f JOIN passage s ON s.id = f.passage_id JOIN page p ON p.id = s.page_id
        JOIN volume v ON v.id = p.volume_id JOIN shelf_volume sv ON sv.volume_id = v.id
-       WHERE passage_fts MATCH ? ORDER BY score LIMIT 60`,
+       WHERE passage_fts MATCH ? AND v.admission != 'rejected' ORDER BY score LIMIT 60`,
       [query],
     )
       .filter((h) => !opts.tag || tagsOf(db, h.volume).some((t) => t.tag === opts.tag))
@@ -136,7 +137,7 @@ export function matchingVolumes(db: Database, question: string, limit = 3): Volu
   const params = w.flatMap((x) => [`%${x}%`, `%${x}%`]);
   const ids = rows<{ id: string }>(
     db,
-    `SELECT v.id FROM volume v LEFT JOIN cover c ON c.volume_id = v.id WHERE v.carry = 'carry' AND v.page_count > 0 AND (${like}) LIMIT ${limit}`,
+    `SELECT v.id FROM volume v LEFT JOIN cover c ON c.volume_id = v.id WHERE v.carry = 'carry' AND v.page_count > 0 AND v.admission != 'rejected' AND (${like}) LIMIT ${limit}`,
     params,
   ).map((r) => r.id);
   return volumes(db).filter((v) => ids.includes(v.id));

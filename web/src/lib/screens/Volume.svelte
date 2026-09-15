@@ -2,7 +2,47 @@
   import type { Database } from '../core/db';
   import { outline, page, pageCount, passagesOf, volume, volumeMeta } from '../core/queries';
   import { SECTIONS } from '../core/types';
+  import { candidates as fetchCandidates, verdict as sendVerdict, type Candidate } from '../core/api';
+  import { onMount } from 'svelte';
   export let db: Database;
+
+  let candidate: Candidate | null = null;
+  let filing: string | null = null;
+  let judging = false;
+  let note = '';
+
+  async function loadCandidate() {
+    candidate = null;
+    if (v?.admission !== 'staged') return;
+    try {
+      candidate = (await fetchCandidates()).candidates.find((c) => c.id === id) ?? null;
+      filing = candidate?.section ?? null;
+    } catch {
+      candidate = null;
+    }
+  }
+
+  async function judge(kind: 'admit' | 'refile' | 'reject') {
+    judging = true;
+    note = '';
+    try {
+      const r = await sendVerdict(id, kind, kind === 'refile' ? filing : null);
+      if (r.error) {
+        note = r.error;
+      } else {
+        dispatchEvent(new CustomEvent('lifekit:reload'));
+        if (kind === 'reject') location.hash = '#/recent';
+        else note = kind === 'refile' ? 'Refiled and admitted.' : 'Admitted.';
+        candidate = null;
+      }
+    } catch (e) {
+      note = `Failed: ${String(e)}`;
+    }
+    judging = false;
+  }
+
+  $: id, v, loadCandidate();
+  onMount(loadCandidate);
   export let id: string;
   export let initialPage = 1;
   export let highlight: string | null = null;
@@ -30,7 +70,34 @@
       <a class="back" href="#/recent">‹ Recent</a>
       <h1 class="vol-title">{v.title}</h1>
       <span class="sub">{v.publisher}, {v.edition}</span>
+      {#if v.admission === 'staged'}<span class="tag new block">New download</span>{/if}
     </div>
+    {#if v.admission === 'staged'}
+      <div class="group">Waiting for your verdict</div>
+      <div class="res packet">
+        {#if candidate?.question}
+          <div class="src"><b>You asked: {candidate.question.text}</b></div>
+          {#if candidate.question.wanted}<div class="src">Looking for: {candidate.question.wanted}</div>{/if}
+          {#if candidate.question.answer}<p>{candidate.question.answer}</p>{/if}
+        {:else if candidate === null}
+          <div class="src">The question that pulled this is not on record.</div>
+        {/if}
+        <div class="filing">
+          <span class="src">Filed under</span>
+          <select bind:value={filing}>
+            {#each SECTIONS as s}<option value={s.id}>{s.title}</option>{/each}
+          </select>
+        </div>
+        <div class="verdicts">
+          <button class="chip ask" disabled={judging} on:click={() => judge('admit')}>Admit</button>
+          <button class="chip" disabled={judging || !filing || filing === candidate?.section} on:click={() => judge('refile')}>Refile</button>
+          <button class="chip" disabled={judging} on:click={() => judge('reject')}>Reject</button>
+        </div>
+        {#if note}<div class="src">{note}</div>{/if}
+      </div>
+    {:else if note}
+      <div class="hint">{note}</div>
+    {/if}
     <div class="vol-head">
       <img class="thumb big" src={`/thumbs/${v.id}.png`} alt="" />
       <div>

@@ -20,6 +20,7 @@
     <div>
       <h2 title={volume.title}>{shortTitle(volume.title)}</h2>
       <div class="ed">{volume.publisher}, {volume.edition}</div>
+      {#if volume.admission === 'staged'}<span class="tag new">New download</span>{/if}
     </div>
   </div>
   <p>{shortCover(volume.cover)}</p>

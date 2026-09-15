@@ -1,10 +1,31 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import type { Database } from '../core/db';
   import { shelves } from '../core/queries';
+  import { digest as fetchDigest, profile as fetchProfile } from '../core/api';
   export let db: Database;
-  import { volumes } from '../core/queries';
-  const list = shelves(db);
-  const total = volumes(db).length;
+  $: list = shelves(db);
+  let line = '';
+  let summary: string | null = null;
+
+  onMount(async () => {
+    try {
+      const d = await fetchDigest();
+      const parts = [];
+      if (d.added.length) parts.push(`${d.added.length} volume${d.added.length === 1 ? '' : 's'} added.`);
+      if (d.candidates.length) parts.push(`${d.candidates.length} waiting for your verdict.`);
+      if (d.pending.length) parts.push(`${d.pending.length} being looked for.`);
+      line = parts.join(' ') || 'Nothing new.';
+    } catch {
+      line = 'Offline.';
+    }
+    try {
+      const p = await fetchProfile();
+      summary = p.profile.updated_at ? p.summary || 'Set up' : '';
+    } catch {
+      summary = null;
+    }
+  });
 </script>
 
 <div class="dir">
@@ -12,8 +33,18 @@
     <div class="top"><h1>Library</h1></div>
     <div class="digest">
       <h2>Since you were last online</h2>
-      <p>{total} volumes added.</p>
+      <p>{line || '…'}</p>
     </div>
+    {#if summary !== null}
+      <a class="row profile" href="#/profile">
+        <div class="n"></div>
+        <div>
+          <div class="t">{summary ? 'Profile' : 'Set up your profile'}</div>
+          <div class="s">{summary || 'Where you live, what you do, who is with you.'}</div>
+        </div>
+        <div></div>
+      </a>
+    {/if}
     <div class="label">CONTENTS</div>
     {#each list as s}
       <a class="row" href={`#/section/${s.id}`}>

@@ -1,14 +1,17 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { Database } from './lib/core/db';
-  import { database } from './lib/core/db';
+  import { database, reload } from './lib/core/db';
+  import Welcome from './lib/screens/Welcome.svelte';
+  import Profile from './lib/screens/Profile.svelte';
+  import { profile as fetchProfile } from './lib/core/api';
   import Library from './lib/screens/Library.svelte';
   import Recent from './lib/screens/Recent.svelte';
   import Section from './lib/screens/Section.svelte';
   import Search from './lib/screens/Search.svelte';
   import Volume from './lib/screens/Volume.svelte';
   import Digest from './lib/screens/Digest.svelte';
-  import { online } from './lib/core/net';
+  import { forceOffline, online } from './lib/core/net';
   import { queued } from './lib/core/api';
 
   let db: Database | null = null;
@@ -17,6 +20,22 @@
   onMount(async () => {
     db = await database();
     addEventListener('hashchange', () => (route = location.hash.replace(/^#/, '') || '/'));
+    addEventListener('lifekit:reload', async () => (db = await reload()));
+    // first start: the profile is unset and nobody has skipped the welcome
+    let dismissed = false;
+    try {
+      dismissed = localStorage.getItem('lifekit.welcomeDone') === '1';
+    } catch {
+      dismissed = true;
+    }
+    if (!dismissed && (route === '/' || route === '')) {
+      try {
+        const p = await fetchProfile();
+        if (!p.profile.updated_at) location.hash = '#/welcome';
+      } catch {
+        /* no API: stay on the library */
+      }
+    }
   });
 
   $: parts = route.split('?')[0].split('/').filter(Boolean);
@@ -34,6 +53,10 @@
   <Search {db} initial={params.get('q') ?? ''} />
 {:else if screen === 'digest'}
   <Digest />
+{:else if screen === 'welcome'}
+  <Welcome />
+{:else if screen === 'profile'}
+  <Profile />
 {:else if screen === 'volume'}
   <Volume {db} id={parts[1]} initialPage={Number(params.get('page') ?? 1)} highlight={params.get('passage')} />
 {:else}
@@ -45,5 +68,5 @@
   <a href="#/recent" class:on={screen === 'recent'}>Recent</a>
   <a href="#/search" class:on={screen === 'search'}>Search</a>
   <a href="#/digest" class:on={screen === 'digest'}>Digest{#if queued().length}<span class="dot"></span>{/if}</a>
-  <span class="net" class:off={!$online} title={$online ? 'Online' : 'Offline'}></span>
+  <button class="net" class:off={!$online} title={$forceOffline ? 'Back online' : 'Simulate offline'} aria-label={$forceOffline ? 'Back online' : 'Simulate offline'} on:click={() => forceOffline.update((v) => !v)}></button>
 </nav>

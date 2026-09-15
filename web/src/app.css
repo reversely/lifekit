@@ -126,3 +126,17 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .nav a.on .dot { background: var(--ground); }
 .nav .net { width: 10px; height: 10px; border-radius: 50%; background: #4ade80; align-self: center; margin-left: 4px; }
 .nav .net.off { background: #71717a; }
+
+/* onboarding, profile, the packet, the marker */
+.tag.new { background: var(--text); color: var(--ground); border-color: var(--text); font-weight: 600; margin-left: 8px; vertical-align: middle; }
+.card .tag.new { display: inline-block; margin: 4px 0 0; }
+.tag.new.block { display: inline-block; margin: 10px 0 0; }
+.askrow.steps { padding-top: 14px; }
+.askrow .chip { padding: 8px 16px; }
+.res.packet .filing { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.res.packet select { font: inherit; font-size: 15px; color: var(--text); background: var(--ground); border: 1px solid var(--border-strong); border-radius: 8px; padding: 6px 10px; }
+.res.packet .verdicts { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.res.packet .verdicts .chip { padding: 8px 16px; }
+.res.packet .chip:disabled { opacity: 0.4; cursor: default; }
+.dir .row.profile .t { border-bottom-color: var(--paper-line); }
+.nav .net { padding: 0; border: 0; cursor: pointer; }
