@@ -26,7 +26,7 @@ await clickText('button', 'Children'); await clickText('button', 'Next');
 await clickText('button', 'Next'); await wait(1200); await shot('3-what-it-looks-for');
 console.log('final text:', (await page.evaluate(() => document.body.innerText)).slice(0, 600).replace(/\n+/g, ' | '));
 await clickText('button', 'Start'); 
-for (let i = 0; i < 60; i++) { await wait(5000); const t = await page.evaluate(() => document.body.innerText); if (!/Working|Finding sources|Sending/.test(t)) break; }
+for (let i = 0; i < 60; i++) { await wait(5000); const t = await page.evaluate(() => document.body.innerText); if (!/Working|Finding sources|Sending|Looking/.test(t)) break; }
 await wait(1500); await shot('4-digest');
 console.log('digest:', (await page.evaluate(() => document.body.innerText)).slice(0, 900).replace(/\n+/g, ' | '));
 const href = await page.evaluate(() => { const a = [...document.querySelectorAll('a')].find((x) => x.textContent.trim() === 'Open'); return a && a.getAttribute('href'); });
