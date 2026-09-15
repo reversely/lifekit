@@ -8,6 +8,7 @@ dependencies = [
     "fastapi>=0.141.1",
     "httpx>=0.28.1",
     "huggingface-hub>=0.25",
+    "libzim>=3.13.0",
     "pillow>=10",
     "pypdfium2>=4",
     "uvicorn>=0.52.3",

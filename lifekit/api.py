@@ -93,7 +93,9 @@ def health():
 
 @app.get("/api/config")
 def api_config():
-    return provider.describe()
+    from lifekit.library import zim
+
+    return {**provider.describe(), "zim": zim.describe()}
 
 
 @app.get("/api/search")

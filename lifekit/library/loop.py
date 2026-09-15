@@ -20,6 +20,7 @@ from .fetch import UA, VOLUMES_DIR
 from .pages import html_pages
 from .segment import segment
 from .tags import apply_tags
+from . import zim
 from .verdicts import filing_examples, rejected_ids
 
 WIKI_SEARCH = "https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&srlimit=8&srsearch="
@@ -148,13 +149,18 @@ def pull_wikipedia(db, candidate: dict, section: str, question_id: str) -> str:
         return volume_id  # already in the library; a pull is idempotent
     dest = VOLUMES_DIR / volume_id
     dest.mkdir(parents=True, exist_ok=True)
-    body = _get(candidate["url"])
+    if candidate.get("zim_path"):
+        body = zim.clean_html(zim.article_html(candidate["zim_path"]))
+        fetched_by = f"lifekit.library.loop 0.1 from {zim.available().name}"
+    else:
+        body = _get(candidate["url"])
+        fetched_by = "lifekit.library.loop 0.1"
     (dest / "source.html").write_bytes(body)
     sha = hashlib.sha256(body).hexdigest()
     retrieved = now()
     (dest / "source.meta.json").write_text(json.dumps({
         "id": volume_id, "url": candidate["url"], "sha256": sha, "bytes": len(body),
-        "content_type": "text/html", "retrieved": retrieved, "fetched_by": "lifekit.library.loop 0.1",
+        "content_type": "text/html", "retrieved": retrieved, "fetched_by": fetched_by,
     }, indent=1))
     db.execute("DELETE FROM passage_fts WHERE passage_id IN (SELECT id FROM passage WHERE page_id IN (SELECT id FROM page WHERE volume_id = ?))", (volume_id,))
     db.execute("DELETE FROM passage WHERE page_id IN (SELECT id FROM page WHERE volume_id = ?)", (volume_id,))
@@ -264,11 +270,18 @@ def work(db, ask, answer, covers=None, log=print) -> list[dict]:
             log(f"{qid}: no topic")
             continue
         set_state(db, qid, "named", topic=topic)
-        try:
-            candidates = wikipedia_candidates(topic)
-        except Exception as error:  # noqa: BLE001
-            log(f"{qid}: search failed {error}")
-            continue
+        candidates = []
+        if zim.available():
+            try:
+                candidates = zim.search(topic)
+            except Exception as error:  # noqa: BLE001
+                log(f"{qid}: zim search failed {error}")
+        if not candidates:
+            try:
+                candidates = wikipedia_candidates(topic)
+            except Exception as error:  # noqa: BLE001
+                log(f"{qid}: search failed {error}")
+                continue
         set_state(db, qid, "searching")
         candidates = pick(ask, text, candidates)
         if not candidates:
