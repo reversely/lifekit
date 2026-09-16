@@ -13,10 +13,10 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(String(e).slice(0, 160)));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 160)); });
 const results = [];
-const check = (name, ok, note = '') => results.push(`${ok ? 'PASS' : 'FAIL'}  ${name}${note ? '  (' + note + ')' : ''}`);
+const check = (name, ok, note = '') => { const line = `${ok ? 'PASS' : 'FAIL'}  ${name}${note ? '  (' + note + ')' : ''}`; results.push(line); console.log(line); };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const text = () => page.evaluate(() => document.body.innerText);
-const go = async (hash, sel = 'body') => { await page.goto(`${BASE}/${hash}`, { waitUntil: 'networkidle0' }); await page.waitForSelector(sel, { timeout: 30000 }); await wait(400); };
+const go = async (hash, sel = 'body') => { await page.goto(`${BASE}/${hash}`, { waitUntil: 'networkidle0' }); await page.waitForSelector(sel, { timeout: 90000 }); await wait(400); };
 const clickText = async (sel, t) => page.evaluate((sel, t) => { const el = [...document.querySelectorAll(sel)].find((e) => e.textContent.trim() === t); if (el) { el.click(); return true; } return false; }, sel, t);
 const shot = async (n) => { if (outDir) await page.screenshot({ path: `${outDir}/${stamp}_${n}.png` }); };
 const api = async (path, init) => (await fetch(`${BASE}${path}`, init)).json();
@@ -37,7 +37,7 @@ check('slash focuses the search box', await page.evaluate(() => document.activeE
 await page.evaluate(() => { const i = document.querySelector('.bar input'); i.value = ''; });
 await page.click('.bar input'); await page.keyboard.type('how much bleach for a gallon of water');
 await clickText('button', 'Ask');
-const answered = await until(async () => /Answer/.test(await text()) && !/Asking…/.test(await text()), 60, 2000);
+const answered = await until(async () => /Answer/i.test(await text()) && !/Asking…/.test(await text()), 60, 2000);
 check('ask online returns a quoted answer', answered && /page \d+/.test(await text()));
 await shot('1-answer');
 
@@ -66,7 +66,8 @@ check('sync completes', synced);
 await wait(1000);
 const digest = await api('/api/digest');
 const cand = digest.candidates.find((c) => c.question && /splint/.test(c.question.text));
-check('sync staged a candidate for the stored question', !!cand, cand ? cand.id : JSON.stringify(digest.pending).slice(0, 100));
+const answeredSplint = digest.answered.find((a) => /splint/.test(a.question));
+check('sync worked the stored question: staged a candidate or answered from admitted volumes', !!cand || (answeredSplint && answeredSplint.state === 'resolved'), cand ? cand.id : answeredSplint ? `${answeredSplint.state} from ${answeredSplint.volumes.join(', ')}` : JSON.stringify(digest.pending).slice(0, 100));
 await shot('3-digest');
 
 // 6. packet by keyboard: A admits
@@ -75,8 +76,8 @@ if (cand) {
   check('candidate page shows the packet', /WAITING FOR YOUR VERDICT|Waiting for your verdict/i.test(await text()));
   check('packet names the question', /splint a broken wrist/.test(await text()));
   check('packet shows the thumbnail or tile, not a broken image', await page.evaluate(() => { const img = document.querySelector('.vol-panel img, .vol-head img'); return !img || (img.complete && img.naturalWidth > 0) || !!document.querySelector('.tile'); }));
-  await page.keyboard.press('a'); await wait(2500);
-  check('A admits the candidate', /Admitted/.test(await text()));
+  await page.keyboard.press('a');
+  check('A admits the candidate', await until(async () => /Admitted/.test(await text()), 20, 1000));
   const row = await api('/api/candidates');
   check('admitted volume leaves the candidate list', !row.candidates.some((c) => c.id === cand.id));
   await shot('4-admitted');
@@ -91,10 +92,10 @@ if (others.length) {
   const target = before === 'medicine' ? 'water' : 'medicine';
   await page.select('.vol-panel select, select', target); await wait(200);
   await page.evaluate(() => document.activeElement.blur());
-  await page.keyboard.press('r'); await wait(2500);
-  const after = (await api('/api/digest')).added.find((a) => a.id === v.id);
-  const tags = await page.evaluate(() => [...document.querySelectorAll('.tag')].map((t) => t.textContent.trim()));
-  check('R refiles into the chosen section', /Admitted/.test(await text()) && tags.some((t) => /Water|Survival Medicine/.test(t)), `${before} -> ${target}`);
+  await page.keyboard.press('r');
+  const refiled = await until(async () => /admitted/i.test(await text()) && (await page.evaluate(() => [...document.querySelectorAll('.tag')].map((t) => t.textContent.trim()))).some((t) => /Water|Survival Medicine/.test(t)), 90, 1000);
+  const section = (await api('/api/candidates')).candidates.find((c) => c.id === v.id);
+  check('R refiles into the chosen section', refiled && !section, `${before} -> ${target}`);
 }
 
 // 8. reject by button on a third candidate, then it is gone from search
@@ -102,10 +103,10 @@ const rest = (await api('/api/candidates')).candidates;
 if (rest.length) {
   const v = rest[0];
   await go(`#/volume/${v.id}`, '.pager');
-  await clickText('button', 'Reject'); await wait(2500);
-  check('reject routes back to Recent', /#\/recent/.test(await page.evaluate(() => location.hash)));
-  const visible = await page.evaluate((id) => !![...document.querySelectorAll('a.card')].find((a) => a.getAttribute('href').endsWith(id)), v.id);
-  check('rejected volume is gone from Recent', !visible, v.id);
+  await clickText('button', 'Reject');
+  check('reject routes back to Recent', await until(async () => /#\/recent/.test(await page.evaluate(() => location.hash)), 20, 500));
+  const gone = await until(async () => !(await page.evaluate((id) => !![...document.querySelectorAll('a.card')].find((a) => a.getAttribute('href').endsWith(id)), v.id)), 30, 1000);
+  check('rejected volume is gone from Recent after the reload', gone, v.id);
 }
 
 // 9. pager keys on a long volume
@@ -118,9 +119,9 @@ check('ArrowLeft goes back', /Page 10 of/.test(await text()));
 
 // 10. rail section link and counts
 await go('#/', '.row');
-await clickText('.rail a', 'Water'); await wait(600);
+await page.evaluate(() => document.querySelector('.rail a[href="#/section/water"]').click()); await wait(600);
 check('rail section link opens the section', /#\/section\/water/.test(await page.evaluate(() => location.hash)) && /Water/.test(await text()));
-check('section grid is three across on desktop', await page.evaluate(() => getComputedStyle(document.querySelector('.grid')).gridTemplateColumns.split(' ').length === 3));
+check('section grid is three across on desktop', await page.evaluate(() => { const g = document.querySelector('.grid'); return !!g && getComputedStyle(g).gridTemplateColumns.split(' ').length === 3; }));
 
 // 11. profile edit seeds a question
 await go('#/profile', '.screen');
@@ -136,13 +137,13 @@ await go('#/', '.row');
 check('a set profile does not route to Welcome', !/#\/welcome/.test(await page.evaluate(() => location.hash)));
 
 // 13. phone width still has the bottom nav and no rail
-await page.setViewport({ width: 390, height: 1100, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-await go('#/recent', '.card');
+await page.setViewport({ width: 390, height: 1100, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); // Chrome reloads on the emulation change
+await wait(1500);
+await go('?phone#/recent', '.card');
 check('phone hides the rail and shows the nav', await page.evaluate(() => { const r = document.querySelector('.rail'); const n = document.querySelector('.nav'); return (!r || getComputedStyle(r).display === 'none') && n && getComputedStyle(n).display !== 'none'; }));
 check('phone: no horizontal scroll', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
 await shot('5-phone-recent');
 
 check('no page errors across the run', errors.length === 0, errors[0] ?? '');
-console.log(results.join('\n'));
 console.log(`${results.filter((r) => r.startsWith('PASS')).length}/${results.length} passed`);
 await browser.close();

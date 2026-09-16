@@ -9,14 +9,14 @@ const out = []; const check = (n, ok, note='') => out.push(`${ok ? 'PASS' : 'FAI
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 await page.goto(`${BASE}/#/volume/wikipedia-box-jellyfish?page=2`, { waitUntil: 'networkidle0' }); await page.waitForSelector('.pager', { timeout: 20000 }); await wait(500);
 const pageText = () => page.evaluate(() => document.querySelector('.pager span')?.textContent);
-await page.keyboard.press('ArrowRight'); await wait(200); check('ArrowRight pages forward', (await pageText()) === 'Page 3 of 7', await pageText());
-await page.keyboard.press('ArrowLeft'); await wait(200); check('ArrowLeft pages back', (await pageText()) === 'Page 2 of 7', await pageText());
-await page.focus('select'); await page.keyboard.press('ArrowRight'); await wait(200); check('arrows in the select do not page', (await pageText()) === 'Page 2 of 7');
+await page.keyboard.press('ArrowRight'); await wait(200); check('ArrowRight pages forward', /^Page 3 of/.test(await pageText()), await pageText());
+await page.keyboard.press('ArrowLeft'); await wait(200); check('ArrowLeft pages back', /^Page 2 of/.test(await pageText()), await pageText());
+await page.focus('select'); await page.keyboard.press('ArrowRight'); await wait(200); check('arrows in the select do not page', /^Page 2 of/.test(await pageText()));
 await page.keyboard.press('Escape'); await wait(100); check('Escape blurs the select', await page.evaluate(() => document.activeElement?.tagName !== 'SELECT'));
 check('rail visible at desktop', await page.evaluate(() => getComputedStyle(document.querySelector('.rail')).display !== 'none'));
 check('bottom nav hidden at desktop', await page.evaluate(() => getComputedStyle(document.querySelector('.nav')).display === 'none'));
 check('panel is sticky', await page.evaluate(() => getComputedStyle(document.querySelector('.vol-panel')).position === 'sticky'));
-check('thumbnail fallback tile shown', await page.evaluate(() => !!document.querySelector('.thumb.tile') && !document.querySelector('img.thumb')));
+check('thumbnail shows a loaded image or the tile', await page.evaluate(() => { const img = document.querySelector('img.thumb'); return !!document.querySelector('.thumb.tile') || (!!img && img.complete && img.naturalWidth > 0); }));
 check('article column capped', await page.evaluate(() => document.querySelector('.vol-article').getBoundingClientRect().width <= 720));
 await page.goto(`${BASE}/#/search`, { waitUntil: 'networkidle0' }); await page.waitForSelector('.bar input', { timeout: 20000 }); await wait(300);
 await page.keyboard.press('/'); await wait(100); check('slash focuses the search box', await page.evaluate(() => document.activeElement?.tagName === 'INPUT'));

@@ -3,6 +3,7 @@
   import { outline, page, pageCount, passagesOf, volume, volumeMeta } from '../core/queries';
   import { SECTIONS } from '../core/types';
   import { candidates as fetchCandidates, verdict as sendVerdict, type Candidate } from '../core/api';
+  import { applyVerdict } from '../core/db';
   import { onMount } from 'svelte';
   import Thumb from '../Thumb.svelte';
   export let db: Database;
@@ -33,7 +34,7 @@
       if (r.error) {
         note = r.error;
       } else {
-        dispatchEvent(new CustomEvent('lifekit:reload'));
+        applyVerdict(db, id, r.admission ?? (kind === 'reject' ? 'rejected' : 'admitted'), kind === 'refile' ? filing : null);
         if (kind === 'reject') location.hash = '#/recent';
         else note = kind === 'refile' ? 'Refiled and admitted.' : 'Admitted.';
         candidate = null;

@@ -22,6 +22,7 @@
     db = await database();
     addEventListener('hashchange', () => (route = location.hash.replace(/^#/, '') || '/'));
     addEventListener('lifekit:reload', async () => (db = await reload()));
+    addEventListener('lifekit:changed', () => (db = db)); // same copy, changed in place
     // first start: the profile is unset and nobody has skipped the welcome
     let dismissed = false;
     try {

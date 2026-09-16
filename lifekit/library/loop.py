@@ -103,7 +103,7 @@ def candidates(db: sqlite3.Connection) -> list[dict]:
         " LEFT JOIN cover c ON c.volume_id = v.id WHERE v.admission = 'staged' ORDER BY v.retrieved DESC"
     ):
         section = db.execute("SELECT shelf_id FROM shelf_volume WHERE volume_id = ?", (vid,)).fetchone()
-        prov = db.execute("SELECT derived_from FROM provenance WHERE entity_id = ? AND activity = 'pull'", (vid,)).fetchone()
+        prov = db.execute("SELECT derived_from FROM provenance WHERE entity_id = ? AND activity = 'pull' ORDER BY at DESC", (vid,)).fetchone()
         qids = json.loads(prov[0]) if prov else []
         question = None
         if qids:
@@ -146,7 +146,11 @@ def pull_wikipedia(db, candidate: dict, section: str, question_id: str) -> str:
     if volume_id in rejected_ids():
         raise RuntimeError(f"{volume_id}: rejected by the owner earlier")
     if db.execute("SELECT 1 FROM volume WHERE id = ? AND page_count > 0", (volume_id,)).fetchone():
-        return volume_id  # already in the library; a pull is idempotent
+        # already in the library; a pull is idempotent, but the question still links to it
+        db.execute("INSERT INTO provenance VALUES (?,?,?,?,?)",
+                   (volume_id, "pull", "lifekit.library.loop 0.1", json.dumps([question_id]), now()))
+        db.commit()
+        return volume_id
     dest = VOLUMES_DIR / volume_id
     dest.mkdir(parents=True, exist_ok=True)
     if candidate.get("zim_path"):

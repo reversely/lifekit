@@ -28,7 +28,7 @@ export function database(): Promise<Database> {
         pointer,
         bytes.length,
         bytes.length,
-        sqlite3.capi.SQLITE_DESERIALIZE_FREEONCLOSE | sqlite3.capi.SQLITE_DESERIALIZE_READONLY,
+        sqlite3.capi.SQLITE_DESERIALIZE_FREEONCLOSE,
       );
       if (rc !== 0) throw new Error(`sqlite3_deserialize failed with ${rc}`);
       return db;
@@ -40,4 +40,17 @@ export function database(): Promise<Database> {
 /** Run a query and return rows as objects keyed by column name. */
 export function rows<T = Record<string, SqlValue>>(db: Database, sql: string, params: SqlValue[] = []): T[] {
   return db.selectObjects(sql, params as any) as T[];
+}
+
+/** Mirror a verdict the API applied into the in-memory copy, so the screens change
+ *  at once instead of waiting for the file to download again. */
+export function applyVerdict(db: Database, volumeId: string, admission: string, section: string | null): void {
+  db.exec({ sql: 'UPDATE volume SET admission = ? WHERE id = ?', bind: [admission, volumeId] });
+  if (section) {
+    db.exec({ sql: 'DELETE FROM shelf_volume WHERE volume_id = ?', bind: [volumeId] });
+    db.exec({ sql: "INSERT INTO shelf_volume VALUES (?, ?, (SELECT coalesce(max(\"order\"), 0) + 1 FROM shelf_volume WHERE shelf_id = ?), 'reference')", bind: [section, volumeId, section] });
+    db.exec({ sql: "DELETE FROM volume_tag WHERE volume_id = ? AND tag LIKE 'section:%'", bind: [volumeId] });
+    db.exec({ sql: "INSERT OR REPLACE INTO volume_tag VALUES (?, ?, 'hand', '')", bind: [volumeId, `section:${section}`] });
+  }
+  dispatchEvent(new CustomEvent('lifekit:changed'));
 }
