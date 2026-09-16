@@ -1,17 +1,17 @@
-# Deployments and the approval of library additions
+# Deployments and the curation of library additions
 
-This document states where LifeKit runs, who approves what the question loop adds to the
+This document states where LifeKit runs, who curates what the question loop adds to the
 library, and how the public demo shows that loop without running it. It fixes the decisions
-the repo owner made on 2026-09-12 and gives the tables and screens that follow from them.
+the repo reader made on 2026-09-12 and gives the tables and screens that follow from them.
 It supersedes the page audit in `library-schema.md` (the `page.audit` columns and section 6)
-and the three-part section approval recorded on 2026-08-23.
+and the three-part section review recorded on 2026-08-23.
 
 ## Summary
 
 LifeKit runs as one codebase on two kinds of host. An instance on a GPU box serves one
 household: it downloads documents, answers questions from them, stores questions it cannot
-answer, and, when a source turns up, adds the document to the library and answers. The owner
-of the box reviews each addition. The public Space on Hugging Face runs the same web app over
+answer, and, when a source turns up, adds the document to the library and answers. The person
+running the box adds each download to the library or removes it. The public Space on Hugging Face runs the same web app over
 a fixed database and plays a recorded pass of the loop so a visitor can see each pathway.
 
 ## Conventions
@@ -19,14 +19,14 @@ a fixed database and plays a recorded pass of the loop so a visitor can see each
 | Term | Names |
 |---|---|
 | instance | One running LifeKit: a database, an API, a web app, and a model endpoint. |
-| box | A GPU host that runs a real instance for its owner. The first two are the Acer Veriton GN100 and a DGX Spark; both carry the GB10 and 121 GB of unified memory. |
+| box | A GPU host that runs a real instance for its reader. The first two are the Acer Veriton GN100 and a DGX Spark; both carry the GB10 and 121 GB of unified memory. |
 | Space | The Hugging Face Space `reversely/lifekit`, a demo instance with no live loop. |
-| owner | The person who runs a box. The owner approves additions. |
+| reader | The person who runs a box and curates its downloads. |
 | provider | The setting that names the model endpoint an instance calls. |
 | gap record | What the model writes when it cannot answer: the question, the topic, and the kind of document that would answer it. |
-| candidate | A document the loop fetched, cut, and indexed for a stored question, awaiting the owner's verdict. |
-| packet | The screen that shows one candidate for a verdict. |
-| verdict | The owner's decision on a candidate: admit, refile, or reject. |
+| new download | A document the loop fetched, cut, and indexed for a stored question, not yet added to the library or removed. |
+| download panel | The region of a volume page that shows a new download with its two actions. |
+| curation | Adding a new download to the library, in a section, or removing it. |
 
 ## 1. Instances
 
@@ -50,7 +50,7 @@ Nothing on a box uploads. The library, the questions, and the profile stay on th
 ### 1.2 The Space
 
 The Space serves the built web app and the API from one Docker image over a database that
-ships in the image. The loop does not run: a public Space has no owner to approve additions
+ships in the image. The loop does not run: a public Space has no reader to curate additions
 and no per-visitor storage, so live pulls would show every visitor the admissions of every
 other visitor. The demo route (section 4) plays a recorded pass instead. The provider
 setting on the Space names Hugging Face inference with Llama 3.1 8B Instruct for the live
@@ -71,7 +71,7 @@ an injected function, so the setting changes one constructor.
 ## 2. The gap record
 
 When the answer prompt returns NOT ANSWERED, the model writes a gap record in the same
-reply, after the verdict word: the topic in one to four words and the kind of document that
+reply, after the ANSWERED or NOT ANSWERED word: the topic in one to four words and the kind of document that
 would answer the question, in one sentence. The API stores both on the question row. The
 record replaces the separate topic prompt the loop runs today, so the loop starts from what
 the model said was missing at the moment it failed.
@@ -81,25 +81,25 @@ the model said was missing at the moment it failed.
 | `topic` | The noun phrase the model filed the question under. |
 | `wanted` | One sentence naming the kind of document that would answer it. |
 
-## 3. Candidates and verdicts
+## 3. New downloads and curation
 
 ### 3.1 The staged state
 
-The loop fetches, cuts, indexes, covers, and files a candidate exactly as it does now, and
+The loop fetches, cuts, indexes, covers, and files a new download exactly as it does now, and
 marks the volume `staged`. A staged volume appears in search, in its section, and in Recent
 with the marker "New download" on its card and on its page. The re-ask runs against it, so
-the packet can show the answer the addition would give.
+the panel can show the answer the addition gives.
 
 | Column on `volume` | Values |
 |---|---|
-| `admission` | `stock` for a volume from a shelf list; `staged` for a loop addition awaiting a verdict; `admitted`; `rejected`. |
-| `admitted_at`, `admitted_by` | The verdict's date and the owner. |
+| `admission` | `stock` for a volume from a shelf list; `staged` for a loop addition not yet added or removed; `admitted`; `rejected`. |
+| `admitted_at`, `admitted_by` | The date of the add or remove, and who did it. |
 
 Search excludes `rejected` volumes. Everything else ranks as today.
 
-### 3.2 The packet
+### 3.2 The download panel
 
-One screen per candidate, reached from the digest and from the marker on the card:
+One panel per new download, on its volume page, reached from the digest and from the marker on the card:
 
 | Region | Reads |
 |---|---|
@@ -107,39 +107,39 @@ One screen per candidate, reached from the digest and from the marker on the car
 | The document | `volume` title, publisher, licence sentence, retrieved date, cover text |
 | The filing | the `section:` tag the loop chose, with the twelve sections as options |
 | The answer it gives | the re-ask's answer and the quoted passage with its page link |
-| Verdict | "Add to library" and "Remove", under the sentence "Add this document to the library, or remove it." A changed section plus Add is the refile. |
+| Actions | "Add to library" and "Remove", under the sentence "Add this document to the library, or remove it." A changed section plus Add is the refile. |
 
-### 3.3 Verdicts
+### 3.3 Curation
 
 - Add to library (admit) sets `admission = admitted` and removes the marker.
 - Add to library with a changed section (refile) writes the new section to the volume's hand tag file, which already survives
   rebuilds, then admits. Each refile also appends one line to a per-instance examples file
-  that the section prompt reads, so the loop's filing improves from the owner's corrections.
+  that the section prompt reads, so the loop's filing improves from the reader's corrections.
 - Remove (reject) sets `admission = rejected`, removes the volume from search, and records the
   volume id in the shelf's `rejected.tsv` so a later pull of the same document is skipped.
   Rejection covers the one document. A rule against a publisher for a topic, or against a
   publisher outright, joins later if a rejection repeats.
 
-The digest lists staged documents under "New downloads": what the loop added since the last digest. Each opens its volume page, where the verdict sits.
+The digest lists staged documents under "New downloads": what the loop added since the last digest. Each opens its volume page, where the two actions sit.
 
 ## 4. The demo route on the Space
 
 The Space adds a route, `#/demo`, that walks a visitor through five stations. Each station
 shows a real screen of the app over seeded rows and one paragraph stating what the app did
 and why. The seeded rows ship in the database: one stored question, its gap record, one
-staged Wikipedia candidate with its cover and marker, the re-ask's answer, and one digest.
+staged Wikipedia download with its cover and marker, the re-ask's answer, and one digest.
 
 | Station | Screen | The paragraph states |
 |---|---|---|
 | 1 | Search with a query the library answers | The answer quotes a page; the page opens at the passage. |
 | 2 | Search with the seeded question, offline switch on | The library has nothing; the question is stored with what the model said was missing. |
 | 3 | Digest, offline switch off | The loop named a topic, searched, pulled a document, filed it, and asked again. |
-| 4 | The packet | The owner sees the document, the filing, and the answer it gives, and gives a verdict. |
+| 4 | The download panel | The reader sees the document, its section, and the answer it gives, and adds it or removes it. |
 | 5 | The section page | The admitted document sits in its binder without the marker. |
 
 The offline switch sits in the navigation on every instance. On, it forces the app's online
 state false, so a question goes to the local queue as it would with no network. Off, it
-returns to the browser's own signal. On a box the switch lets the owner rehearse the loop;
+returns to the browser's own signal. On a box the switch lets the reader rehearse the loop;
 on the Space it lets the visitor reach station 2.
 
 ## 5. Tables this document changes
@@ -155,6 +155,6 @@ on the Space it lets the visitor reach station 2.
 
 | Endpoint | Does |
 |---|---|
-| `GET /api/candidates` | staged volumes with their question, answer, and filing |
-| `POST /api/verdict` | `{volume, verdict, section?}` applies one verdict |
+| `GET /api/candidates` | new downloads with their question, answer, and section (the path keeps its name) |
+| `POST /api/verdict` | `{volume, verdict: admit or reject, section?}` adds to the library or removes (the path and verbs keep their names) |
 | `GET /api/config` | the provider names and whether the loop is on, for the app's status line |
