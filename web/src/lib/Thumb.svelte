@@ -1,19 +1,22 @@
 <script lang="ts">
-  // A volume's thumbnail. When the file is missing, a typographic tile takes its place
-  // so no broken image ever shows.
+  // A volume's thumbnail. When the file is missing, a placeholder book cover takes its
+  // place: a grey book with a darker spine, the title centred in uppercase, the
+  // publisher beneath, so no broken image ever shows.
   export let id: string;
   export let title = '';
   export let publisher = '';
   export let big = false;
   let failed = false;
   $: failed = false, id;
-  const initial = (text: string) => (text.trim()[0] ?? '').toUpperCase();
 </script>
 
 {#if failed}
-  <div class="thumb tile" class:big aria-hidden="true">
-    <span class="i">{initial(publisher || title)}</span>
-    <span class="t">{title.slice(0, big ? 60 : 28)}</span>
+  <div class="thumb book" class:big aria-hidden="true">
+    <span class="spine"></span>
+    <span class="face">
+      <span class="t">{title}</span>
+      <span class="p">{publisher.split(',')[0]}</span>
+    </span>
   </div>
 {:else}
   <img class="thumb" class:big src={`/thumbs/${id}.png`} alt="" on:error={() => (failed = true)} />

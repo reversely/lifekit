@@ -11,10 +11,10 @@ const clickText = async (sel, text) => { const ok = await page.evaluate((sel, te
 await page.goto(`${B}/#/digest`, { waitUntil: 'networkidle0' }); await wait(1500); await shot('4-digest');
 await page.goto(`${B}/#/volume/wikipedia-altitude-sickness`, { waitUntil: 'networkidle0' }); await wait(1500); await shot('5-packet');
 console.log('packet:', (await page.evaluate(() => document.body.innerText)).slice(0, 900).replace(/\n+/g, ' | '));
-await clickText('button', 'Admit'); await wait(3000); await shot('6-admitted');
+await clickText('button', 'Add to library'); await wait(3000); await shot('6-admitted');
 console.log('after:', (await page.evaluate(() => document.body.innerText)).slice(0, 300).replace(/\n+/g, ' | '));
 await page.goto(`${B}/#/volume/wikipedia-appalachian-trail`, { waitUntil: 'networkidle0' }); await wait(1500);
-await clickText('button', 'Reject'); await wait(3000); console.log('after reject route:', await page.evaluate(() => location.hash));
+await clickText('button', 'Remove'); await wait(3000); console.log('after reject route:', await page.evaluate(() => location.hash));
 await page.goto(`${B}/#/recent`, { waitUntil: 'networkidle0' }); await wait(1500); await shot('7-recent');
 await page.goto(`${B}/#/section/environments`, { waitUntil: 'networkidle0' }); await wait(1500); await shot('8-section');
 await page.goto(`${B}/#/`, { waitUntil: 'networkidle0' }); await wait(1500); await shot('9-library');

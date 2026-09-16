@@ -1,7 +1,7 @@
 // Drive every reader flow against a running instance and print PASS or FAIL per step.
 // Usage: BASE=http://host:8008 node verify-box.mjs [outdir] [stamp]
 // Flows: local search, ask online, offline switch stores a question, sync works it,
-// candidate packet by keyboard (A admits, R refiles), reject, profile edit seeds a
+// new download by keyboard (A adds, R removes), a changed section, profile edit seeds a
 // question, rail section links, pager keys, slash focus, digest state, reload after verdict.
 import puppeteer from 'puppeteer-core';
 const BASE = process.env.BASE ?? 'http://localhost:4173';
@@ -73,29 +73,31 @@ await shot('3-digest');
 // 6. packet by keyboard: A admits
 if (cand) {
   await go(`#/volume/${cand.id}`, '.pager');
-  check('candidate page shows the packet', /WAITING FOR YOUR VERDICT|Waiting for your verdict/i.test(await text()));
+  check('candidate page shows the packet', /New download/i.test(await text()));
   check('packet names the question', await until(async () => /splint a broken wrist/.test(await text()), 20, 500));
   check('packet shows the thumbnail or tile, not a broken image', await page.evaluate(() => { const img = document.querySelector('.vol-panel img, .vol-head img'); return !img || (img.complete && img.naturalWidth > 0) || !!document.querySelector('.tile'); }));
   await page.keyboard.press('a');
-  check('A admits the candidate', await until(async () => /Admitted/.test(await text()), 20, 1000));
+  check('A adds the document', await until(async () => /Added\./.test(await text()), 20, 1000));
   const row = await api('/api/candidates');
   check('admitted volume leaves the candidate list', !row.candidates.some((c) => c.id === cand.id));
   await shot('4-admitted');
 }
 
-// 7. refile another candidate through the select and R
+// 7. add another new download with a changed section
 const others = (await api('/api/candidates')).candidates.filter((c) => c.id !== cand?.id);
 if (others.length) {
   const v = others[0];
   await go(`#/volume/${v.id}`, '.pager');
   const before = v.section;
-  const target = before === 'medicine' ? 'water' : 'medicine';
+  const ids = ((await api('/api/config')).sections ?? []).map((s) => s.id);
+  const target = ids.find((s) => s !== before) ?? before;
   await page.select('.vol-panel select, select', target); await wait(200);
   await page.evaluate(() => document.activeElement.blur());
-  await page.keyboard.press('r');
-  const refiled = await until(async () => /admitted/i.test(await text()) && (await page.evaluate(() => [...document.querySelectorAll('.tag')].map((t) => t.textContent.trim()))).some((t) => /Water|Survival Medicine/.test(t)), 90, 1000);
+  await clickText('button', 'Add to library');
+  const targetTitle = ((await api('/api/config')).sections ?? []).find((s) => s.id === target)?.title ?? target;
+  const refiled = await until(async () => /Added\./.test(await text()) && (await page.evaluate(() => [...document.querySelectorAll('.tag')].map((t) => t.textContent.trim()))).includes(targetTitle), 90, 1000);
   const section = (await api('/api/candidates')).candidates.find((c) => c.id === v.id);
-  check('R refiles into the chosen section', refiled && !section, `${before} -> ${target}`);
+  check('Add to library with a changed section refiles', refiled && !section, `${before} -> ${target}`);
 }
 
 // 8. reject by button on a third candidate, then it is gone from search
@@ -103,7 +105,8 @@ const rest = (await api('/api/candidates')).candidates;
 if (rest.length) {
   const v = rest[0];
   await go(`#/volume/${v.id}`, '.pager');
-  await clickText('button', 'Reject');
+  await page.evaluate(() => document.activeElement.blur());
+  await page.keyboard.press('r');
   check('reject routes back to Recent', await until(async () => /#\/recent/.test(await page.evaluate(() => location.hash)), 20, 500));
   const gone = await until(async () => !(await page.evaluate((id) => !![...document.querySelectorAll('a.card')].find((a) => a.getAttribute('href').endsWith(id)), v.id)), 30, 1000);
   check('rejected volume is gone from Recent after the reload', gone, v.id);
@@ -135,6 +138,23 @@ await clickText('button', 'Boating'); await wait(500); // restore
 // 12. welcome routing does not loop for a set profile
 await go('#/', '.wordmark');
 check('a set profile does not route to Welcome', !/#\/welcome/.test(await page.evaluate(() => location.hash)));
+
+// 12b. the back-online modal on the offline-to-online transition
+await go('#/search', '.bar input');
+await page.evaluate(() => localStorage.removeItem('lifekit.questions'));
+await (await page.$('.rail .net')).click(); await wait(300);
+await page.evaluate(() => { const i = document.querySelector('.bar input'); i.value = ''; });
+await page.click('.bar input'); await page.keyboard.type('how do I treat a sprained ankle on a hike');
+await clickText('button', 'Ask'); await wait(500);
+await (await page.$('.rail .net')).click();
+check('modal opens on the transition', await until(async () => !!(await page.$('.modal')), 20, 500));
+check('modal shows a round-trip line', await until(async () => /Round trip \d+ ms/.test(await text()), 20, 500));
+check('modal lists the stored question', /sprained ankle/.test(await text()));
+check('modal trail runs the loop', await until(async () => /Question:|The loop is off|Nothing to work/.test(await text()), 60, 2000));
+check('modal reaches Done', await until(async () => /Done\.|The loop is off|Nothing to work/.test(await text()), 180, 2000));
+await shot('6-back-online');
+await clickText('.modal button', 'Close'); await wait(300);
+check('Close dismisses the modal', !(await page.$('.modal')));
 
 // 13. phone width still has the bottom nav and no rail
 await page.setViewport({ width: 390, height: 1100, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); // Chrome reloads on the emulation change

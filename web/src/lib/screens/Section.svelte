@@ -3,12 +3,13 @@
   import Card from '../Card.svelte';
   import Chips from '../Chips.svelte';
   import { tagCounts, volumes } from '../core/queries';
-  import { SECTIONS, type SortKey } from '../core/types';
+  import type { SortKey } from '../core/types';
+  import { sections } from '../core/sections';
   export let db: Database;
   export let id: string;
 
-  $: index = SECTIONS.findIndex((s) => s.id === id);
-  $: section = SECTIONS[index];
+  $: list0 = sections(db);
+  $: section = list0.find((s) => s.id === id);
   let active: string | null = null;
   let sort: SortKey = 'latest';
   $: counts = tagCounts(db, id);
@@ -19,7 +20,7 @@
   <div class="screen"><div class="hint">No such section.</div></div>
 {:else}
 <div class="screen">
-  <div class="top"><h1>{index + 1}. {section.title}</h1><span class="sub">{section.scope}</span></div>
+  <div class="top"><h1>{section.order}. {section.title}</h1><span class="sub">{section.scope}</span></div>
   <Chips
     {counts}
     {active}
@@ -32,6 +33,6 @@
   <div class="grid">
     {#each list as v}<Card volume={v} showTags={false} />{/each}
   </div>
-  {#if !list.length}<div class="hint">No volumes on this shelf yet.</div>{/if}
+  {#if !list.length}<div class="hint">This section has no volumes.</div>{/if}
 </div>
 {/if}

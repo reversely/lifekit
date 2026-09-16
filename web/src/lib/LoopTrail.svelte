@@ -1,22 +1,24 @@
 <script lang="ts">
   // The loop's steps for one pass, in the order they happened, in plain lines.
   import type { LoopEvent } from './core/api';
-  import { SECTIONS } from './core/types';
+  import type { Database } from './core/db';
+  import { sectionTitle as titleOf } from './core/sections';
+  export let db: Database | null = null;
   export let events: LoopEvent[] = [];
   export let working = false;
 
-  const sectionTitle = (id?: string) => SECTIONS.find((s) => s.id === id)?.title ?? id ?? '';
+  const sectionTitle = (id?: string) => (id ? (db ? titleOf(db, id) : id) : '');
   const line = (e: LoopEvent): string => {
     switch (e.step) {
-      case 'start': return `Working on: ${e.text}`;
-      case 'named': return `Topic named by the model: ${e.topic}`;
-      case 'searched': return `Searched ${e.source}: ${e.titles?.length ?? 0} titles`;
-      case 'picked': return `Model chose: ${(e.titles ?? []).join(', ')}`;
+      case 'start': return `Question: ${e.text}`;
+      case 'named': return `The model named the topic: ${e.topic}`;
+      case 'searched': return `Searched ${e.source} and found ${e.titles?.length ?? 0} titles`;
+      case 'picked': return `The model chose ${(e.titles ?? []).join(', ')}`;
       case 'filed': return `Filed under ${sectionTitle(e.section)}`;
       case 'pulled': return `Pulled ${e.title}`;
-      case 'covered': return 'Cover written';
+      case 'covered': return 'Wrote the cover';
       case 'resolved': return 'Answered from the new pages';
-      case 'exhausted': return `Nothing found${e.reason ? `: ${e.reason}` : ''}`;
+      case 'exhausted': return `Found nothing${e.reason ? `: ${e.reason}` : ''}`;
       case 'search_failed': return `Search failed (${e.source})`;
       case 'pull_failed': return `Could not pull ${e.title}`;
       default: return e.step;
@@ -34,7 +36,7 @@
   <div class="res trail">
     {#each g.items as e}
       {#if e.step === 'start'}
-        <div class="src"><b>{e.text}</b>{#if e.origin?.startsWith('rule:')} <span class="from">from your profile</span>{/if}</div>
+        <div class="src"><b>{e.text}</b>{#if e.origin?.startsWith('rule:')} <span class="from">from the profile</span>{/if}</div>
       {:else if e.step === 'resolved'}
         <div class="step done">{line(e)}</div>
         <p>{e.answer}</p>
@@ -49,4 +51,4 @@
     {/each}
   </div>
 {/each}
-{#if working}<div class="hint">{events.length ? 'Working…' : 'Sending stored questions…'}</div>{/if}
+{#if working}<div class="hint">{events.length ? 'The loop is working.' : 'Sending stored questions.'}</div>{/if}

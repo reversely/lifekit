@@ -18,7 +18,7 @@ await page.keyboard.press('Escape'); await wait(100); check('Escape blurs the se
 check('rail visible at desktop', await page.evaluate(() => getComputedStyle(document.querySelector('.rail')).display !== 'none'));
 check('top bar icon row hidden at desktop', await page.evaluate(() => [...document.querySelectorAll('.topbar .actions .action:not(.net)')].every((a) => getComputedStyle(a).display === 'none')));
 check('panel is sticky', await page.evaluate(() => getComputedStyle(document.querySelector('.vol-panel')).position === 'sticky'));
-check('thumbnail shows a loaded image or the tile', await page.evaluate(() => { const img = document.querySelector('img.thumb'); return !!document.querySelector('.thumb.tile') || (!!img && img.complete && img.naturalWidth > 0); }));
+check('thumbnail shows a loaded image or the tile', await page.evaluate(() => { const img = document.querySelector('img.thumb'); return !!document.querySelector('.thumb.book') || (!!img && img.complete && img.naturalWidth > 0); }));
 check('article column capped', await page.evaluate(() => document.querySelector('.vol-article').getBoundingClientRect().width <= 720));
 await page.goto(`${BASE}/#/search`, { waitUntil: 'networkidle0' }); await page.waitForSelector('.bar input', { timeout: 20000 }); await wait(300);
 await page.keyboard.press('/'); await wait(100); check('slash focuses the search box', await page.evaluate(() => document.activeElement?.tagName === 'INPUT'));
@@ -34,6 +34,13 @@ check('one card per row on phone', await page.evaluate(() => getComputedStyle(do
 await page.setViewport({ width: 1440, height: 900 }); await page.waitForSelector('.rail .net', { timeout: 20000 }); await wait(300);
 await page.click('.rail .net'); await wait(300); check('rail switch turns offline', await page.evaluate(() => document.querySelector('.rail .net').textContent.trim() === 'Offline'));
 await page.click('.rail .net'); await wait(300); check('rail switch turns back online', await page.evaluate(() => document.querySelector('.rail .net').textContent.trim() === 'Online'));
+await page.setViewport({ width: 1440, height: 900 });
+await page.goto(`${BASE}/?theme#/library`, { waitUntil: 'networkidle0' }); await wait(500);
+const before = await page.evaluate(() => [document.documentElement.getAttribute('data-theme'), getComputedStyle(document.body).backgroundColor]);
+await page.evaluate(() => document.querySelector('.rail .mode').click()); await wait(400);
+const after = await page.evaluate(() => [document.documentElement.getAttribute('data-theme'), getComputedStyle(document.body).backgroundColor]);
+check('mode toggle flips data-theme and the body background', before[0] !== after[0] && before[1] !== after[1], `${before[0]} ${before[1]} -> ${after[0]} ${after[1]}`);
+await page.evaluate(() => document.querySelector('.rail .mode').click()); await wait(200);
 check('no page errors', errors.length === 0, errors.join(' | '));
 console.log(out.join('\n'));
 await browser.close();

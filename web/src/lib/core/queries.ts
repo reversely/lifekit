@@ -2,7 +2,8 @@
 
 import type { Database } from './db';
 import { rows } from './db';
-import { SECTIONS, type Hit, type Shelf, type SortKey, type Tag, type TagCount, type Volume } from './types';
+import type { Hit, Shelf, SortKey, Tag, TagCount, Volume } from './types';
+import { sections } from './sections';
 
 const SORT_SQL: Record<SortKey, string> = {
   latest: 'v.retrieved DESC',
@@ -11,8 +12,6 @@ const SORT_SQL: Record<SortKey, string> = {
   pages: 'v.page_count DESC',
 };
 
-const sectionTitle = (id: string) => SECTIONS.find((s) => s.id === id)?.title ?? id;
-
 export function shelves(db: Database): Shelf[] {
   const counts = new Map(
     rows<{ tag: string; n: number }>(
@@ -20,11 +19,12 @@ export function shelves(db: Database): Shelf[] {
       "SELECT t.tag AS tag, count(*) AS n FROM volume_tag t JOIN volume v ON v.id = t.volume_id WHERE v.carry = 'carry' AND v.page_count > 0 AND v.admission != 'rejected' AND t.tag LIKE 'section:%' GROUP BY t.tag",
     ).map((r) => [r.tag, r.n]),
   );
-  return SECTIONS.map((s, i) => ({
+  return sections(db).map((s) => ({
     id: s.id,
-    order: i + 1,
+    order: s.order,
     title: s.title,
     scopeLine: s.scope,
+    icon: s.icon,
     count: counts.get(`section:${s.id}`) ?? 0,
   }));
 }
@@ -75,7 +75,7 @@ export function tagCounts(db: Database, within?: string): TagCount[] {
   const byTag = new Map(counts.map((c) => [c.tag, c.n]));
   const out: TagCount[] = [];
   // every section, in order, empty ones included
-  for (const s of SECTIONS) {
+  for (const s of sections(db)) {
     const tag = `section:${s.id}`;
     out.push({ tag, namespace: 'section', value: s.id, label: s.title, count: byTag.get(tag) ?? 0 });
   }
@@ -143,7 +143,6 @@ export function matchingVolumes(db: Database, question: string, limit = 3): Volu
   return volumes(db).filter((v) => ids.includes(v.id));
 }
 
-export { sectionTitle };
 
 export interface Page {
   id: string;
@@ -156,9 +155,10 @@ export function volume(db: Database, id: string): Volume | undefined {
   return volumes(db).find((v) => v.id === id);
 }
 
-export function volumeMeta(db: Database, id: string): { url: string; licence: string; statement: string; sha256: string; retrieved: string } | undefined {
-  const r = rows<any>(db, 'SELECT url, licence, licence_statement, sha256, retrieved FROM volume WHERE id = ?', [id])[0];
-  return r && { url: r.url, licence: r.licence, statement: r.licence_statement, sha256: r.sha256, retrieved: r.retrieved };
+export function volumeMeta(db: Database, id: string): { url: string; licence: string; statement: string; sha256: string; retrieved: string; history: string | null } | undefined {
+  const r = rows<any>(db, 'SELECT url, licence, licence_statement, licence_read_at, sha256, retrieved FROM volume WHERE id = ?', [id])[0];
+  const history = r && /action=history/.test(r.licence_read_at ?? '') ? r.licence_read_at : null;
+  return r && { url: r.url, licence: r.licence, statement: r.licence_statement, sha256: r.sha256, retrieved: r.retrieved, history };
 }
 
 export function pageCount(db: Database, volumeId: string): number {

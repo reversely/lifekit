@@ -22,7 +22,7 @@ check('empty search shows no result groups', (await page.$$eval('.group', (e) =>
 await page.type('.bar input', 'qwxzvbn plkjhgf');
 await new Promise((r) => setTimeout(r, 400));
 const noRes = await page.$$eval('.hint', (els) => els.map((e) => e.textContent).join(' | ')).catch(() => '');
-check('nonsense query shows the stored-for-later hint', /Nothing in the library/.test(noRes), noRes.slice(0, 50));
+check('nonsense query shows the no-match hint', /No page in the library/.test(noRes), noRes.slice(0, 50));
 
 await go('#/search?q=%22%3B%20DROP%20TABLE%20volume%3B--', 'body');
 check('punctuation query does not break the page', errors.length === 0, errors.join(' | ').slice(0, 120));
@@ -66,7 +66,7 @@ const outOfRange = await page.$('.page');
 check('out-of-range page shows no page body', outOfRange === null);
 
 await go('#/volume/does-not-exist', 'body');
-check('missing volume shows the not-in-library screen', (await page.$eval('h1', (e) => e.textContent)).includes('Not in the library'));
+check('missing volume shows the not-in-library screen', /not in the library/i.test(await page.evaluate(() => document.body.innerText)));
 
 const longTitle = await page.evaluate(async () => { location.hash = '#/recent'; await new Promise((r) => setTimeout(r, 600)); return [...document.querySelectorAll('.card h2')].map((h) => h.textContent.length); });
 check('card titles clamp under 66 characters', Math.max(...longTitle) <= 66, `max ${Math.max(...longTitle)}`);

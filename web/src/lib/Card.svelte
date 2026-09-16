@@ -5,7 +5,7 @@
   export let showTags = true;
 
   const shortCover = (text: string) =>
-    (text || 'Cover pending.').replace(/\n/g, ' ').split(/(?<=[.!?])\s+/).slice(0, 2).join(' ');
+    (text || 'No cover yet.').replace(/\n/g, ' ').split(/(?<=[.!?])\s+/).slice(0, 2).join(' ');
 
   /** At most 64 characters, cut at a word boundary; the volume page shows the full title. */
   const shortTitle = (title: string, max = 64) => {

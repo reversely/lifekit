@@ -33,7 +33,7 @@ say('loop shows the model pick and filing', await until(async () => /Model chose
 say('loop finishes with an answer or nothing found', await until(async () => /Answered from the new pages|Nothing found/.test(await text()) && !/Working…/.test(await text()), 180, 2000));
 await shot('3');
 await next(); await wait(2000);
-say('station 4 shows a packet', await until(async () => /Waiting for your verdict/i.test(await text()), 20, 1000));
+say('station 4 shows a packet', await until(async () => /New download/i.test(await text()), 20, 1000));
 await shot('4');
 await next(); await wait(2000);
 say('station 5 shows a section', /volumes|New download|pages/.test(await text()));

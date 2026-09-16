@@ -5,6 +5,8 @@ const BASE = process.env.BASE ?? 'http://localhost:4173';
 const axe = fs.readFileSync('node_modules/axe-core/axe.min.js', 'utf8');
 const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
 const page = await browser.newPage();
+const THEME = process.env.THEME;
+if (THEME) await page.evaluateOnNewDocument((th) => { try { localStorage.setItem('lifekit.theme', th); } catch {} }, THEME);
 await page.setViewport({ width: 390, height: 1100 });
 const routes = ['#/', '#/library', '#/recent', '#/section/water', '#/search?q=tick', '#/volume/nhs-hypothermia?page=2', '#/digest'];
 for (const r of routes) {

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Database } from '../core/db';
   import { outline, page, pageCount, passagesOf, volume, volumeMeta } from '../core/queries';
-  import { SECTIONS } from '../core/types';
+  import { sections } from '../core/sections';
   import { candidates as fetchCandidates, verdict as sendVerdict, type Candidate } from '../core/api';
   import { applyVerdict } from '../core/db';
   import { onMount } from 'svelte';
@@ -36,7 +36,7 @@
       } else {
         applyVerdict(db, id, r.admission ?? (kind === 'reject' ? 'rejected' : 'admitted'), kind === 'refile' ? filing : null);
         if (kind === 'reject') location.hash = '#/recent';
-        else note = kind === 'refile' ? 'Refiled and admitted.' : 'Admitted.';
+        else note = 'Added.';
         candidate = null;
       }
     } catch (e) {
@@ -44,6 +44,8 @@
     }
     judging = false;
   }
+
+  const add = () => judge(filing && candidate && filing !== candidate.section ? 'refile' : 'admit');
 
   $: id, v, loadCandidate();
   onMount(loadCandidate);
@@ -61,8 +63,8 @@
     if (e.key === 'ArrowLeft' && current > 1) current -= 1;
     else if (e.key === 'ArrowRight' && current < total) current += 1;
     else if (v?.admission === 'staged' && !judging && !e.metaKey && !e.ctrlKey && !e.altKey) {
-      if (e.key === 'a' || e.key === 'A') judge('admit');
-      else if ((e.key === 'r' || e.key === 'R') && filing && filing !== candidate?.section) judge('refile');
+      if (e.key === 'a' || e.key === 'A') add();
+      else if (e.key === 'r' || e.key === 'R') judge('reject');
     }
   }
   export let id: string;
@@ -78,7 +80,7 @@
   $: passages = p ? passagesOf(db, p.id) : [];
   $: contents = v?.format === 'html' ? outline(db, id) : [];
   const sectionsOf = (tags: { tag: string }[]) =>
-    tags.filter((t) => t.tag.startsWith('section:')).map((t) => SECTIONS.find((s) => s.id === t.tag.slice(8))?.title ?? t.tag);
+    tags.filter((t) => t.tag.startsWith('section:')).map((t) => sections(db).find((s) => s.id === t.tag.slice(8))?.title ?? t.tag);
 
   /** Page text split into passages, so the one arrived at from search can be marked. */
   $: pieces = p
@@ -98,25 +100,22 @@
     <div class="vol-cols">
     <aside class="vol-panel">
     {#if v.admission === 'staged'}
-      <div class="group">Waiting for your verdict</div>
+      <div class="group">New download</div>
       <div class="res packet">
+        <p class="lead">Add this document to the library, or remove it.</p>
+        <p>{v.cover || 'No cover yet.'}</p>
         {#if candidate?.question}
-          <div class="src"><b>You asked: {candidate.question.text}</b></div>
-          {#if candidate.question.wanted}<div class="src">Looking for: {candidate.question.wanted}</div>{/if}
-          {#if candidate.question.answer}<p>{candidate.question.answer}</p>{/if}
-        {:else if candidate === null}
-          <div class="src">The question that pulled this is not on record.</div>
+          <div class="src">Question: {candidate.question.text}</div>
         {/if}
         <div class="filing">
-          <span class="src">Filed under</span>
-          <select bind:value={filing} bind:this={filingSelect} aria-label="Filed under">
-            {#each SECTIONS as s}<option value={s.id}>{s.title}</option>{/each}
+          <span class="src">Section</span>
+          <select bind:value={filing} bind:this={filingSelect} aria-label="Section">
+            {#each sections(db) as s}<option value={s.id}>{s.title}</option>{/each}
           </select>
         </div>
         <div class="verdicts">
-          <button class="chip ask" disabled={judging} on:click={() => judge('admit')} title="A">Admit</button>
-          <button class="chip" disabled={judging || !filing || filing === candidate?.section} on:click={() => judge('refile')} title="R">Refile</button>
-          <button class="chip" disabled={judging} on:click={() => judge('reject')}>Reject</button>
+          <button class="chip ask" disabled={judging} on:click={add} title="A">Add to library</button>
+          <button class="chip" disabled={judging} on:click={() => judge('reject')} title="R">Remove</button>
         </div>
         {#if note}<div class="src">{note}</div>{/if}
       </div>
@@ -133,8 +132,8 @@
         </div>
         <div class="meta">
           <div>{total} pages, {v.licence}</div>
-          {#if meta?.statement}<div class="quote">“{meta.statement}”</div>{/if}
           <div>Retrieved {(meta?.retrieved ?? '').slice(0, 10)}, sha256 {(meta?.sha256 ?? '').slice(0, 12)}</div>
+          {#if meta?.history}<div><a class="history" href={meta.history} target="_blank" rel="noreferrer">Authors are listed in the page history.</a></div>{/if}
           <a class="open" href={meta?.url} target="_blank" rel="noreferrer">Open the original</a>
         </div>
       </div>
@@ -166,5 +165,5 @@
     </div>
   </div>
 {:else}
-  <div class="screen"><div class="top"><h1>Not in the library</h1></div></div>
+  <div class="screen"><div class="hint">This volume is not in the library.</div></div>
 {/if}

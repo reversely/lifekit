@@ -4,6 +4,7 @@
   import { matchingVolumes, search, tagCounts } from '../core/queries';
   import { answer as askApi, enqueue, type AnswerResult } from '../core/api';
   import { online } from '../core/net';
+  import NetToggle from '../NetToggle.svelte';
   export let db: Database;
   export let initial = '';
 
@@ -65,8 +66,8 @@
     {#if query}<button class="x" on:click={() => ((query = ''), (reply = null), (stored = null))}>×</button>{/if}
   </div>
   <div class="askrow">
-    <button class="chip ask" on:click={ask} disabled={asking || !query.trim()}>{asking ? 'Asking…' : 'Ask'}</button>
-    <span class="hint inline">{$online ? 'Online: the model answers from the pages below.' : 'Offline: a question is stored until the network returns.'}</span>
+    <button class="chip ask" on:click={ask} disabled={asking || !query.trim()}>{asking ? 'Asking' : 'Ask'}</button>
+    <NetToggle size={14} /><span class="hint inline">{$online ? 'The model answers from the pages below.' : 'The app is offline, so a question is stored until the network returns.'}</span>
   </div>
   {#if reply?.answered}
     <div class="group">Answer</div>
@@ -79,7 +80,7 @@
     </div>
   {:else if stored}
     <div class="group">Stored</div>
-    <div class="res"><p>{stored === 'offline' ? 'You are offline. This question is stored and will be worked when the network returns.' : 'Nothing in the library answers this yet. Stored; a source will be found when the loop next runs.'}</p><a class="open" href="#/digest">Open the digest</a></div>
+    <div class="res"><p>{stored === 'offline' ? 'The app is offline. The question is stored and the loop works the question when the network returns.' : 'No page in the library answers this question. The question is stored and the loop works the question on the next sync.'}</p><a class="open" href="#/digest">Open the digest</a></div>
   {/if}
   <Chips {counts} {active} onFilter={(t) => (active = t)} />
   {#if vols.length}
@@ -102,7 +103,7 @@
       </div>
     {/each}
     {#if !hits.length}
-      <div class="hint">Nothing in the library answers this. Stored for when you are online.</div>
+      <div class="hint">No page in the library matches this query.</div>
     {/if}
   {/if}
 </div>

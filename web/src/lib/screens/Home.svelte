@@ -6,20 +6,11 @@
   import { get } from 'svelte/store';
   import Icon from '../Icon.svelte';
   import { activeId, send, startNew } from '../core/chat';
+  import { config as fetchConfig } from '../core/api';
   import { online } from '../core/net';
 
-  // One question per subject the library answers; tapping one sends it as-is.
-  const GALLERY_QUESTIONS = [
-    'How do I purify water?',
-    'Which way is north without a compass?',
-    'How do I keep a fire going in rain?',
-    'How do I treat a blister on trail?',
-    'Something bit me. What now?',
-    'How do I signal a plane?',
-    'How much bleach for a gallon of water?',
-    'How do I stop heavy bleeding?',
-    'What do I do if I get lost on a hike?',
-  ];
+  // The gallery comes from packs/questions.tsv through the API; none while loading.
+  let gallery: string[] = [];
   const VISIBLE = 3;
   const ROTATE_MS = 5000;
   const FADE_MS = 350;
@@ -27,18 +18,23 @@
   let start = 0;
   let faded = false;
   let timer: ReturnType<typeof setInterval>;
-  $: visible = Array.from({ length: VISIBLE }, (_, i) => GALLERY_QUESTIONS[(start + i) % GALLERY_QUESTIONS.length]);
+  $: visible = gallery.length ? Array.from({ length: Math.min(VISIBLE, gallery.length) }, (_, i) => gallery[(start + i) % gallery.length]) : [];
 
-  onMount(() => {
+  onMount(async () => {
+    try {
+      gallery = (await fetchConfig()).questions?.gallery ?? [];
+    } catch {
+      gallery = [];
+    }
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     timer = setInterval(() => {
       if (reduce) {
-        start = (start + VISIBLE) % GALLERY_QUESTIONS.length;
+        start = gallery.length ? (start + VISIBLE) % gallery.length : 0;
         return;
       }
       faded = true;
       setTimeout(() => {
-        start = (start + VISIBLE) % GALLERY_QUESTIONS.length;
+        start = gallery.length ? (start + VISIBLE) % gallery.length : 0;
         faded = false;
       }, FADE_MS);
     }, ROTATE_MS);

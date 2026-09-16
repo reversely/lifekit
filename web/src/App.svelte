@@ -3,7 +3,7 @@
   import type { Database } from './lib/core/db';
   import { database, reload } from './lib/core/db';
   import { volume } from './lib/core/queries';
-  import { SECTIONS } from './lib/core/types';
+  import { sectionTitle } from './lib/core/sections';
   import Welcome from './lib/screens/Welcome.svelte';
   import Profile from './lib/screens/Profile.svelte';
   import { profile as fetchProfile } from './lib/core/api';
@@ -20,6 +20,8 @@
   import Rail from './lib/Rail.svelte';
   import TopBar from './lib/TopBar.svelte';
   import Backdrop from './lib/Backdrop.svelte';
+  import BackOnline from './lib/BackOnline.svelte';
+  import { theme } from './lib/core/theme';
 
   let db: Database | null = null;
   let route = location.hash.replace(/^#/, '') || '/';
@@ -56,20 +58,21 @@
     demo: 'How it works', welcome: 'Welcome', profile: 'Profile',
   };
   $: title =
-    screen === 'section' ? SECTIONS.find((s) => s.id === parts[1])?.title ?? 'Section'
+    screen === 'section' ? (db ? sectionTitle(db, parts[1] ?? '') : 'Section')
     : screen === 'volume' ? (db && volume(db, parts[1] ?? '')?.title) || 'Volume'
     : TITLES[screen] ?? '';
   $: action = screen === 'chat' ? { icon: 'clock', label: 'Chats', href: '#/chats' } : screen === 'digest' ? null : { icon: 'activity', label: 'Digest', href: '#/digest' };
 </script>
 
-{#key isHome}<Backdrop animated={isHome} />{/key}
+{#key isHome + $theme}<Backdrop animated={isHome} light={$theme === 'light'} />{/key}
+<BackOnline {db} />
 {#if db}
   <Rail {db} {screen} sectionId={parts[1] ?? null} />
 {/if}
 <TopBar home={isHome} back={!isHome} {title} action={isHome ? null : action} paper={screen === 'library'} />
 <main class="main" class:paper={screen === 'library'}>
 {#if !db}
-  <div class="screen"><div class="top"><span class="sub">Opening…</span></div></div>
+  <div class="screen"><div class="hint">Opening the library.</div></div>
 {:else if isHome}
   <Home />
 {:else if screen === 'library'}
@@ -81,7 +84,7 @@
 {:else if screen === 'search'}
   <Search {db} initial={params.get('q') ?? ''} />
 {:else if screen === 'digest'}
-  <Digest />
+  <Digest {db} />
 {:else if screen === 'chat'}
   <Chat id={parts[1] ?? null} ask={params.get('ask')} />
 {:else if screen === 'chats'}

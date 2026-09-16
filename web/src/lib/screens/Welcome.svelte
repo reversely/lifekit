@@ -73,14 +73,14 @@
 <div class="screen">
   <div class="top">
     <h1>Welcome</h1>
-    <span class="sub">{done ? 'What the library will look for' : q ? `${step + 1} of ${questions.length}` : ''}</span>
+    <span class="sub">{done ? 'Questions the loop will work' : q ? `${step + 1} of ${questions.length}` : ''}</span>
   </div>
 
   {#if error}
     <div class="hint">{error}</div>
     <div class="askrow"><button class="chip" on:click={skip}>Open the library</button></div>
   {:else if !data}
-    <div class="hint">Opening…</div>
+    <div class="hint">Opening the profile.</div>
   {:else if q}
     <div class="group">{q.ask}</div>
     <ProfileSteps question={q} profile={data.profile} onChange={change} />
@@ -98,11 +98,11 @@
         </div>
       {/each}
     {:else}
-      <div class="hint">Nothing to look for yet. Answers add searches here.</div>
+      <div class="hint">No questions yet. Each answer adds questions here.</div>
     {/if}
     <div class="askrow steps">
       <button class="chip" on:click={() => (step -= 1)}>Back</button>
-      <button class="chip ask" on:click={start} disabled={starting}>{starting ? 'Looking…' : 'Start'}</button>
+      <button class="chip ask" on:click={start} disabled={starting}>{starting ? 'Starting' : 'Start'}</button>
     </div>
   {/if}
 </div>

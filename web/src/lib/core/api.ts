@@ -75,6 +75,9 @@ export interface Config {
   small: string;
   answer: string;
   loop: boolean;
+  zim?: { file: string; articles: number } | null;
+  sections?: { id: string; order: number; title: string; scope: string; gloss: string; icon: string }[];
+  questions?: Record<string, string[]>;
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {

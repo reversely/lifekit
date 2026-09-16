@@ -3,7 +3,8 @@
   // inner screen gets a back chevron, its title, and the actions; the home gets a
   // centred row of icon buttons and no title, since the hero carries the wordmark.
   import Icon from './Icon.svelte';
-  import { forceOffline, online } from './core/net';
+  import NetToggle from './NetToggle.svelte';
+  import ThemeToggle from './ThemeToggle.svelte';
   export let title = '';
   export let back = false;
   export let home = false;
@@ -38,8 +39,7 @@
     {:else if action}
       <a class="action" href={action.href} aria-label={action.label} title={action.label}><Icon name={action.icon} /></a>
     {/if}
-    <button class="action net" class:off={!$online} aria-label={$forceOffline ? 'Back online' : 'Simulate offline'} title={$forceOffline ? 'Back online' : 'Simulate offline'} on:click={() => forceOffline.update((v) => !v)}>
-      <Icon name={$online ? 'wifi' : 'wifi-off'} />
-    </button>
+    <span class="action"><ThemeToggle iconOnly size={20} /></span>
+    <span class="action"><NetToggle iconOnly size={20} /></span>
   </div>
 </header>

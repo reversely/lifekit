@@ -37,7 +37,7 @@
 <div class="screen chat">
   <div class="thread" bind:this={list}>
     {#if !messages.length}
-      <div class="hint">Ask about a situation: bleeding, shelter, fire, water, food, animals, rope work, finding your way.</div>
+      <div class="hint">Ask a question about a situation, and the answer quotes the library.</div>
     {/if}
     {#each messages as m (m.id)}
       <ChatMessage message={m} />

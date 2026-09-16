@@ -34,7 +34,7 @@
 <div class="screen">
   <div class="top">
         <h1>Profile</h1>
-    <span class="sub">{data?.summary || 'Not set up yet'}</span>
+    <span class="sub">{data?.summary || 'Not set'}</span>
   </div>
 
   {#if error}
@@ -45,7 +45,7 @@
       <ProfileSteps question={q} profile={data.profile} onChange={change} />
     {/each}
     {#if seeded.length}
-      <div class="group">Added to look for</div>
+      <div class="group">Questions added</div>
       {#each seeded as s}
         <div class="res">
           <div class="src"><b>{s.reason}</b></div>
@@ -55,6 +55,6 @@
       <div class="askrow"><a class="chip" href="#/digest">Open the digest</a></div>
     {/if}
   {:else}
-    <div class="hint">Opening…</div>
+    <div class="hint">Opening the profile.</div>
   {/if}
 </div>

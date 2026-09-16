@@ -11,25 +11,21 @@
   let line = '';
   let summary: string | null = null;
 
-  const ICONS: Record<string, string> = {
-    medicine: 'heart', shelter: 'home', fire: 'zap', water: 'droplet', food: 'target', 'poisonous-plants': 'alert-circle',
-    animals: 'alert-triangle', tools: 'tool', direction: 'compass', signaling: 'radio', environments: 'globe', hazards: 'shield',
-  };
 
   onMount(async () => {
     try {
       const d = await fetchDigest();
       const parts = [];
       if (d.added.length) parts.push(`${d.added.length} volume${d.added.length === 1 ? '' : 's'} added.`);
-      if (d.candidates.length) parts.push(`${d.candidates.length} waiting for your verdict.`);
-      if (d.pending.length) parts.push(`${d.pending.length} being looked for.`);
-      line = parts.join(' ') || 'Nothing new.';
+      if (d.candidates.length) parts.push(`${d.candidates.length} new download${d.candidates.length === 1 ? '' : 's'}.`);
+      if (d.pending.length) parts.push(`${d.pending.length} question${d.pending.length === 1 ? '' : 's'} in progress.`);
+      line = parts.join(' ') || 'Nothing new since the last sync.';
     } catch {
-      line = 'Offline.';
+      line = 'The library on this box is not reachable.';
     }
     try {
       const p = await fetchProfile();
-      summary = p.profile.updated_at ? p.summary || 'Set up' : '';
+      summary = p.profile.updated_at ? p.summary || 'Set' : '';
     } catch {
       summary = null;
     }
@@ -40,14 +36,14 @@
   <div class="screen">
     <div class="digest">
       <h2>Since you were last online</h2>
-      <p>{line || '…'}</p>
+      <p>{line}</p>
     </div>
     {#if summary !== null}
       <a class="row profile" href="#/profile">
         <div class="n"></div>
         <div>
-          <div class="t">{summary ? 'Profile' : 'Set up your profile'}</div>
-          <div class="s">{summary || 'Where you live, what you do, who is with you.'}</div>
+          <div class="t">Profile</div>
+          <div class="s">{summary || 'Not set'}</div>
         </div>
         <div class="ic"><Icon name="user" size={18} /></div>
       </a>
@@ -56,20 +52,20 @@
       <div></div>
       <div>
         <div class="t">How it works</div>
-        <div class="s">Five stations: ask, ask offline, the loop, your verdict, the binder.</div>
+        <div class="s">Five stations show the ask, the offline ask, the loop, the curation, and the binder.</div>
       </div>
       <div class="ic"><Icon name="help-circle" size={18} /></div>
     </a>
-    <div class="label">CONTENTS</div>
+    <div class="label">Contents</div>
     {#each list as s}
       <a class="row" href={`#/section/${s.id}`}>
         <div class="n">{s.order}</div>
         <div>
           <div class="t">{s.title}</div>
           <div class="s">{s.scopeLine}</div>
-          {#if s.count}<div class="c some">{s.count} volumes</div>{:else}<div class="c">none yet</div>{/if}
+          {#if s.count}<div class="c some">{s.count} volume{s.count === 1 ? '' : 's'}</div>{:else}<div class="c">No volumes</div>{/if}
         </div>
-        <div class="ic"><Icon name={ICONS[s.id] ?? 'book-open'} size={18} /></div>
+        <div class="ic"><Icon name={s.icon} size={18} /></div>
       </a>
     {/each}
   </div>

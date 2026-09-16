@@ -34,7 +34,7 @@ console.log('first candidate:', href);
 if (href) {
   await page.goto(`${B}/${href}`, { waitUntil: 'networkidle0' }); await wait(1200); await shot('5-packet');
   console.log('packet:', (await page.evaluate(() => document.body.innerText)).slice(0, 700).replace(/\n+/g, ' | '));
-  await clickText('button', 'Admit'); await wait(2500); await shot('6-admitted');
+  await clickText('button', 'Add to library'); await wait(2500); await shot('6-admitted');
 }
 await page.goto(`${B}/#/recent`, { waitUntil: 'networkidle0' }); await wait(1200); await shot('7-recent');
 await page.goto(`${B}/#/`, { waitUntil: 'networkidle0' }); await wait(1200); await shot('8-library');

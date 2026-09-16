@@ -5,21 +5,32 @@
   // fixed canvas; the still variant paints once and on resize.
   import { onMount } from 'svelte';
   export let animated = false;
+  export let light = false;
 
   // HOME_BIOME from flux theme/biome.ts, as 0-1 triples.
   const rgb = (hex: string) => [0, 1, 2].map((i) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16) / 255);
-  const PALETTE = {
+  const DARK = {
     top: rgb('#17252f'),
     bottom: rgb('#0c1319'),
     glow: rgb('#8FC6BF'),
     terrain: rgb('#0f1a20'),
     mote: rgb('#B5E3DC'),
   };
+  // Light mode: the paper field, the signature as a quarter-strength glow, no motes.
+  const LIGHT = {
+    top: rgb('#F2F4F5'),
+    bottom: rgb('#E6EBEE'),
+    glow: rgb('#35576B'),
+    terrain: rgb('#D5DEE3'),
+    mote: rgb('#35576B'),
+  };
+  $: PALETTE = light ? LIGHT : DARK;
 
   const VERT = 'attribute vec2 a; void main() { gl_Position = vec4(a, 0.0, 1.0); }';
   const HEAD = `precision highp float;
 uniform vec2 res; uniform float time; uniform float scroll;
 uniform vec3 top; uniform vec3 bottom; uniform vec3 glow; uniform vec3 terrain; uniform vec3 mote;
+uniform float strength; uniform float motes;
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 `;
   // HomeBackdrop.tsx SRC, line for line.
@@ -41,9 +52,9 @@ void main() {
   vec2 uv = xy / res;
   vec3 col = mix(top, bottom, smoothstep(0.05, 1.0, uv.y));
   float d = distance(uv * vec2(1.0, 1.6), vec2(0.5, 0.16));
-  col += glow * exp(-d * d * 9.0) * 0.16;
+  col += glow * exp(-d * d * 9.0) * 0.16 * strength;
   float rays = ray(uv, -0.12, -0.30, 0.040) + ray(uv, 0.02, 0.04, 0.060) + ray(uv, 0.15, 0.34, 0.040);
-  col += glow * rays * 0.10;
+  col += glow * rays * 0.10 * strength;
   float farY = ridge(uv.x + scroll * 0.00002, 3.0, 0.62, 0.12);
   col = mix(col, mix(terrain, top, 0.55), smoothstep(farY, farY + 0.004, uv.y));
   float midY = ridge(uv.x + scroll * 0.00004 + 0.53, 5.0, 0.72, 0.11);
@@ -56,8 +67,8 @@ void main() {
     p.x += sin(time * 0.3 + i) * 0.015;
     float flicker = 0.35 + 0.65 * abs(sin(time * (0.6 + hash(i)) + i * 2.0));
     float md = distance(uv * vec2(res.x / res.y, 1.0), p * vec2(res.x / res.y, 1.0));
-    col += mote * exp(-md * md * 90000.0) * flicker * 0.35;
-    col += mote * exp(-md * md * 9000.0) * flicker * 0.045;
+    col += mote * exp(-md * md * 90000.0) * flicker * 0.35 * motes;
+    col += mote * exp(-md * md * 9000.0) * flicker * 0.045 * motes;
   }
   float grain = hash(xy.x + xy.y * 311.7 + fract(time) * 17.0) - 0.5;
   col += grain * 0.025;
@@ -77,7 +88,7 @@ void main() {
   vec2 uv = xy / res;
   vec3 col = mix(top, bottom, smoothstep(0.0, 1.0, uv.y));
   float d = distance(uv * vec2(1.0, 1.7), vec2(0.5, 0.06));
-  col += glow * exp(-d * d * 7.0) * 0.13;
+  col += glow * exp(-d * d * 7.0) * 0.13 * strength;
   float farY = ridge(uv.x, 3.0, 0.80, 0.10);
   col = mix(col, mix(terrain, top, 0.5), smoothstep(farY, farY + 0.004, uv.y));
   float nearY = ridge(uv.x + 0.37, 7.0, 0.90, 0.08);
@@ -123,6 +134,8 @@ void main() {
     gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
     const u = (name: string) => gl.getUniformLocation(program, name);
     for (const [name, value] of Object.entries(PALETTE)) gl.uniform3fv(u(name), value);
+    gl.uniform1f(u('strength'), light ? 0.25 : 1.0);
+    gl.uniform1f(u('motes'), light ? 0.0 : 1.0);
 
     const reduce = matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0;

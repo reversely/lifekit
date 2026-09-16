@@ -6,8 +6,8 @@
   import type { Database } from './core/db';
   import { shelves } from './core/queries';
   import { config as fetchConfig, profile as fetchProfile } from './core/api';
-  import { forceOffline, online } from './core/net';
-  import Icon from './Icon.svelte';
+  import NetToggle from './NetToggle.svelte';
+  import ThemeToggle from './ThemeToggle.svelte';
   export let db: Database;
   export let screen: string;
   export let sectionId: string | null = null;
@@ -19,7 +19,7 @@
   async function load() {
     try {
       const p = await fetchProfile();
-      summary = p.profile.updated_at ? p.summary || 'Set up' : '';
+      summary = p.profile.updated_at ? p.summary || 'Set' : '';
     } catch {
       summary = null;
     }
@@ -57,13 +57,12 @@
   <div class="foot">
     {#if summary !== null}
       <a class="profile" href="#/profile" class:on={screen === 'profile'}>
-        <span class="t">{summary ? 'Profile' : 'Set up your profile'}</span>
-        {#if summary}<span class="s">{summary}</span>{/if}
+        <span class="t">Profile</span>
+        <span class="s">{summary || 'Not set'}</span>
       </a>
     {/if}
-    <button class="net" class:off={!$online} on:click={() => forceOffline.update((v) => !v)} title={$forceOffline ? 'Back online' : 'Simulate offline'}>
-      <Icon name={$online ? 'wifi' : 'wifi-off'} size={16} />{$online ? 'Online' : 'Offline'}
-    </button>
+    <NetToggle />
+    <ThemeToggle />
     {#if model}<div class="model">{model}</div>{/if}
   </div>
 </aside>
