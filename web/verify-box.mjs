@@ -74,7 +74,7 @@ await shot('3-digest');
 if (cand) {
   await go(`#/volume/${cand.id}`, '.pager');
   check('candidate page shows the packet', /WAITING FOR YOUR VERDICT|Waiting for your verdict/i.test(await text()));
-  check('packet names the question', /splint a broken wrist/.test(await text()));
+  check('packet names the question', await until(async () => /splint a broken wrist/.test(await text()), 20, 500));
   check('packet shows the thumbnail or tile, not a broken image', await page.evaluate(() => { const img = document.querySelector('.vol-panel img, .vol-head img'); return !img || (img.complete && img.naturalWidth > 0) || !!document.querySelector('.tile'); }));
   await page.keyboard.press('a');
   check('A admits the candidate', await until(async () => /Admitted/.test(await text()), 20, 1000));
