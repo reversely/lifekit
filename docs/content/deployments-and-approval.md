@@ -107,7 +107,7 @@ One screen per candidate, reached from the digest and from the marker on the car
 | The document | `volume` title, publisher, licence sentence, retrieved date, cover text |
 | The filing | the `section:` tag the loop chose, with the twelve sections as options |
 | The answer it gives | the re-ask's answer and the quoted passage with its page link |
-| Verdict | Admit, Refile, Reject |
+| Verdict | Admit, Refile, Reject, under the sentence "Admit, refile, or reject this document." |
 
 ### 3.3 Verdicts
 
@@ -120,7 +120,7 @@ One screen per candidate, reached from the digest and from the marker on the car
   Rejection covers the one document. A rule against a publisher for a topic, or against a
   publisher outright, joins later if a rejection repeats.
 
-The digest lists staged candidates under "Waiting for your verdict" until each has one.
+The digest lists staged documents under "New downloads": what the loop added since the last digest. Each opens its volume page, where the verdict sits.
 
 ## 4. The demo route on the Space
 

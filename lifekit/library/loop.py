@@ -168,9 +168,10 @@ def pull_wikipedia(db, candidate: dict, section: str, question_id: str) -> str:
     db.execute(
         "INSERT INTO volume (id, title, publisher, edition, url, format, licence, licence_statement, licence_read_at,"
         " retrieved, sha256, carry, tier, freshness) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        (volume_id, candidate["title"], "Wikipedia contributors", retrieved[:10], candidate["url"], "html",
-         "CC-BY-SA-4.0", "Text is available under the Creative Commons Attribution-ShareAlike 4.0 License",
-         "https://en.wikipedia.org/wiki/Wikipedia:Copyrights", retrieved, sha, "carry", "learned", "live"),
+        (volume_id, candidate["title"], "Wikipedia", retrieved[:10], candidate["url"], "html",
+         "CC-BY-SA-4.0", "Text is available under the Creative Commons Attribution-ShareAlike 4.0 License; "
+         "the authors are the article's editors, listed in its page history",
+         candidate["url"] + "?action=history", retrieved, sha, "carry", "learned", "live"),
     )
     db.execute("UPDATE volume SET admission = 'staged' WHERE id = ?", (volume_id,))
     order = db.execute("SELECT coalesce(max(\"order\"), 0) + 1 FROM shelf_volume WHERE shelf_id = ?", (section,)).fetchone()[0]
@@ -214,10 +215,11 @@ def _record_learned(section: str, volume_id: str, candidate: dict, retrieved: st
         if new:
             writer.writeheader()
         writer.writerow({
-            "id": volume_id, "title": candidate["title"], "publisher": "Wikipedia contributors",
+            "id": volume_id, "title": candidate["title"], "publisher": "Wikipedia",
             "edition": retrieved[:10], "url": candidate["url"], "format": "html", "licence": "CC-BY-SA-4.0",
-            "licence_statement": "Text is available under the Creative Commons Attribution-ShareAlike 4.0 License",
-            "licence_read_at": "https://en.wikipedia.org/wiki/Wikipedia:Copyrights", "carry": "carry",
+            "licence_statement": "Text is available under the Creative Commons Attribution-ShareAlike 4.0 License; "
+            "the authors are the article's editors, listed in its page history",
+            "licence_read_at": candidate["url"] + "?action=history", "carry": "carry",
             "role": "reference", "freshness": "live", "tags": "type:encyclopedia,publisher:Wikipedia,tier:learned",
         })
 
