@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS shelf (
     title TEXT NOT NULL,
     scope_line TEXT,
     icon TEXT,
-    gloss TEXT
+    gloss TEXT,
+    accent TEXT
 );
 
 CREATE TABLE IF NOT EXISTS volume (

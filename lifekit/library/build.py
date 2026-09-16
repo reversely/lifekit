@@ -80,7 +80,7 @@ def build(shelves: list[str] | None = None, db_path: Path = DB_PATH) -> dict:
             continue
         if not (LOCAL_PACKS / "shelves" / shelf / "volumes.tsv").exists():
             continue
-        db.execute("INSERT INTO shelf VALUES (?, ?, ?, ?, ?, ?)", (shelf, order, title, scope_line, row["icon"], row["gloss"]))
+        db.execute("INSERT INTO shelf VALUES (?, ?, ?, ?, ?, ?, ?)", (shelf, order, title, scope_line, row["icon"], row["gloss"], row.get("accent")))
         for position, volume in enumerate(read_volumes(shelf), start=1):
             rule_tags = [f"section:{shelf}"] + [t.strip() for t in volume.get("tags", "").split(",") if t.strip()]
             tags_by_volume.setdefault(volume["id"], []).extend(t for t in rule_tags if t not in tags_by_volume.get(volume["id"], []))
