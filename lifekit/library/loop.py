@@ -25,8 +25,7 @@ from .verdicts import filing_examples, rejected_ids
 
 WIKI_SEARCH = "https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&srlimit=8&srsearch="
 WIKI_PAGE = "https://en.wikipedia.org/wiki/"
-SECTIONS = ["medicine", "shelter", "fire", "water", "food", "poisonous-plants", "animals",
-            "tools", "direction", "signaling", "environments", "hazards"]
+from . import sections
 
 TOPIC_PROMPT = (
     "Name the topic of this question in one to four words, as a noun phrase a librarian "
@@ -35,13 +34,8 @@ TOPIC_PROMPT = (
 )
 SECTION_PROMPT = (
     "Choose the one section of a survival library this document belongs in. Sections and what "
-    "they hold: medicine (first aid, illness, medicines); shelter (tents, snow shelters, home "
-    "sheltering); fire (campfires, stoves, wildfire); water (finding, treating, crossing water); "
-    "food (storing, foraging, hunting, cooking); poisonous-plants; animals (bites, stings, "
-    "encounters); tools (knots, cordage, hand tools, repairs, equipment); direction (maps, "
-    "compass, GPS, stars); signaling (rescue, radio, beacons); environments (weather, heat, cold, "
-    "sea); hazards (radiation, chemical, pandemic, outages). Output one section id from that "
-    "list and nothing else. Example: Question: how to remove a tick. Topic: ticks. Output: animals"
+    "they hold: " + sections.filing_list() + ". Output one section id from that list and "
+    "nothing else. Example: Question: how to remove a tick. Topic: ticks. Output: animals"
 )
 PICK_PROMPT = (
     "A question needs a document. You are given numbered Wikipedia article titles from a search. "
@@ -256,12 +250,12 @@ def choose_section(ask, prompt: str, question: str, topic: str) -> str:
     for attempt in range(2):
         user = f"Question: {question}\nTopic: {topic}"
         if attempt:
-            user += "\nAnswer with exactly one of: " + ", ".join(SECTIONS)
+            user += "\nAnswer with exactly one of: " + ", ".join(sections.ids())
         said = ask(prompt, user).strip().lower()
-        hit = next((s for s in sorted(SECTIONS, key=len, reverse=True) if s in said), None)
+        hit = next((s for s in sorted(sections.ids(), key=len, reverse=True) if s in said), None)
         if hit:
             return hit
-    return "tools"
+    return sections.ids()[-5]  # tools, the catch-all for equipment and repairs
 
 
 # -- the pass ------------------------------------------------------------------

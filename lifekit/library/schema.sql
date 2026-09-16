@@ -4,7 +4,9 @@ CREATE TABLE IF NOT EXISTS shelf (
     id TEXT PRIMARY KEY,
     "order" INTEGER NOT NULL,
     title TEXT NOT NULL,
-    scope_line TEXT
+    scope_line TEXT,
+    icon TEXT,
+    gloss TEXT
 );
 
 CREATE TABLE IF NOT EXISTS volume (

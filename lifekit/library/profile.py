@@ -22,31 +22,9 @@ RULES = LOCAL_PACKS / "pull_rules.tsv"
 COLUMNS = ("country", "region", "terrain", "activities", "household", "trips")
 LIST_COLUMNS = ("terrain", "activities", "household", "trips")
 
-# The onboarding questions and their options, one place for both the API and the app.
-QUESTIONS = [
-    {"key": "country", "ask": "Where do you live?", "multi": False,
-     "options": [("US", "United States"), ("CA", "Canada"), ("GB", "United Kingdom"), ("AU", "Australia"), ("other", "Somewhere else")]},
-    {"key": "region", "ask": "Which region?", "multi": False, "depends": "country",
-     "options": []},  # filled per country below
-    {"key": "terrain", "ask": "What is around you?", "multi": True,
-     "options": [("forest", "Forest"), ("mountains", "Mountains"), ("desert", "Desert"), ("coast", "Coast or sea"),
-                 ("river", "Rivers and lakes"), ("snow", "Snow in winter"), ("city", "City")]},
-    {"key": "activities", "ask": "What do you do outdoors?", "multi": True,
-     "options": [("home", "Mostly at home"), ("hiking", "Hiking"), ("camping", "Camping"), ("hunting", "Hunting"),
-                 ("fishing", "Fishing"), ("boating", "Boating"), ("climbing", "Climbing"), ("cycling", "Cycling"), ("foraging", "Foraging")]},
-    {"key": "household", "ask": "Who is in your household?", "multi": True,
-     "options": [("adult", "Adults"), ("children", "Children"), ("elderly", "Older adults"), ("pets", "Pets"), ("chronic", "Someone with a chronic condition")]},
-    {"key": "trips", "ask": "Planning a trip?", "multi": True,
-     "options": [("tropics", "Tropics"), ("arctic", "Arctic or high latitude"), ("desert", "Desert"), ("high-altitude", "High altitude"),
-                 ("sea", "Open sea"), ("abroad", "Another country")]},
-]
-REGIONS = {
-    "US": [("US-WA", "Washington"), ("US-OR", "Oregon"), ("US-CA", "California"), ("US-AK", "Alaska"), ("US-AZ", "Arizona"),
-           ("US-CO", "Colorado"), ("US-TX", "Texas"), ("US-FL", "Florida"), ("US-NY", "New York"), ("US-other", "Another state")],
-    "CA": [("CA-BC", "British Columbia"), ("CA-AB", "Alberta"), ("CA-ON", "Ontario"), ("CA-QC", "Quebec"), ("CA-other", "Another province")],
-    "GB": [("GB-ENG", "England"), ("GB-SCT", "Scotland"), ("GB-WLS", "Wales"), ("GB-NIR", "Northern Ireland")],
-    "AU": [("AU-QLD", "Queensland"), ("AU-NSW", "New South Wales"), ("AU-VIC", "Victoria"), ("AU-WA", "Western Australia"), ("AU-other", "Another state")],
-}
+_DATA = json.loads((LOCAL_PACKS / "profile-questions.json").read_text())
+QUESTIONS = [{**q, "options": [tuple(o) for o in q["options"]]} for q in _DATA["questions"]]
+REGIONS = {k: [tuple(o) for o in v] for k, v in _DATA["regions"].items()}
 REGION_NAMES = {code: name for rows in REGIONS.values() for code, name in rows}
 COUNTRY_NAMES = {code: name for code, name in QUESTIONS[0]["options"]}
 

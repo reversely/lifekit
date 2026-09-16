@@ -23,20 +23,7 @@ DB_PATH = LOCAL_PACKS / "library.sqlite"
 SCHEMA = Path(__file__).with_name("schema.sql")
 AGENT = "lifekit.library.build 0.1"
 
-SHELVES = {
-    "medicine": (1, "Survival Medicine", "Lifesaving steps, injuries, bites and stings, wounds"),
-    "shelter": (2, "Shelter", "Site selection and shelter builds"),
-    "fire": (3, "Fire", "Site preparation, materials, fire lays, ignition"),
-    "water": (4, "Water", "Sources, stills, purification, filtration, crossings"),
-    "food": (5, "Food", "Traps, snares, fishing, game preparation, edible plants"),
-    "poisonous-plants": (6, "Poisonous Plants", "Poisoning routes, avoidance rules, deadly lookalikes"),
-    "animals": (7, "Dangerous Animals", "Insects, arachnids, snakes, aquatic dangers"),
-    "tools": (8, "Tools & Cordage", "Lashing, cordage, knots, improvised tools"),
-    "direction": (9, "Direction Finding", "Celestial methods, improvised compass, offline map"),
-    "signaling": (10, "Signaling & Rescue", "Signals, codes, ground-air signals, aircraft vectoring"),
-    "environments": (11, "Environments", "Desert, tropical, cold weather, and sea modules"),
-    "hazards": (12, "Man-Made Hazards", "Shielding, decontamination, protected water, chemical release"),
-}
+from . import sections
 
 # First page of each FM 21-76 chapter in the 233-page scan (lifekit/reference.py).
 from lifekit.reference import CHAPTER_PAGES
@@ -87,12 +74,13 @@ def build(shelves: list[str] | None = None, db_path: Path = DB_PATH) -> dict:
             db.execute(f"INSERT OR IGNORE INTO {table} VALUES ({','.join('?' * len(row))})", row)
     counts = {"volumes": 0, "pages": 0, "passages": 0}
     tags_by_volume: dict[str, list[str]] = {}
-    for shelf, (order, title, scope_line) in SHELVES.items():
+    for row in sections.rows():
+        shelf, order, title, scope_line = row["id"], row["order"], row["title"], row["scope"]
         if shelves and shelf not in shelves:
             continue
         if not (LOCAL_PACKS / "shelves" / shelf / "volumes.tsv").exists():
             continue
-        db.execute("INSERT INTO shelf VALUES (?, ?, ?, ?)", (shelf, order, title, scope_line))
+        db.execute("INSERT INTO shelf VALUES (?, ?, ?, ?, ?, ?)", (shelf, order, title, scope_line, row["icon"], row["gloss"]))
         for position, volume in enumerate(read_volumes(shelf), start=1):
             rule_tags = [f"section:{shelf}"] + [t.strip() for t in volume.get("tags", "").split(",") if t.strip()]
             tags_by_volume.setdefault(volume["id"], []).extend(t for t in rule_tags if t not in tags_by_volume.get(volume["id"], []))

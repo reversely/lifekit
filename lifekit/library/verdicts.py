@@ -14,8 +14,7 @@ from lifekit.packs import LOCAL_PACKS
 from .fetch import VOLUMES_DIR
 
 EXAMPLES = LOCAL_PACKS / "filing-examples.tsv"
-SECTIONS = ["medicine", "shelter", "fire", "water", "food", "poisonous-plants", "animals",
-            "tools", "direction", "signaling", "environments", "hazards"]
+from . import sections
 
 
 def _now() -> str:
@@ -51,7 +50,7 @@ def apply(db, volume_id: str, verdict: str, section: str | None = None, by: str 
     """Apply one verdict and return the volume's new state."""
     if verdict not in ("admit", "refile", "reject"):
         raise ValueError(f"unknown verdict {verdict!r}")
-    if verdict == "refile" and section not in SECTIONS:
+    if verdict == "refile" and section not in sections.ids():
         raise ValueError(f"refile needs a section, got {section!r}")
     row = db.execute("SELECT id FROM volume WHERE id = ?", (volume_id,)).fetchone()
     if row is None:

@@ -69,20 +69,9 @@ def _short(text: str | None, sentences: int = 2) -> str:
     return " ".join(parts[:sentences])
 
 
-SECTIONS = [
-    ("medicine", "Survival Medicine", "Lifesaving steps, injuries, bites and stings, wounds"),
-    ("shelter", "Shelter", "Site selection and shelter builds"),
-    ("fire", "Fire", "Site preparation, materials, fire lays, ignition"),
-    ("water", "Water", "Sources, stills, purification, filtration, crossings"),
-    ("food", "Food", "Traps, snares, fishing, game preparation, edible plants"),
-    ("poisonous-plants", "Poisonous Plants", "Poisoning routes, avoidance rules, deadly lookalikes"),
-    ("animals", "Dangerous Animals", "Insects, arachnids, snakes, aquatic dangers"),
-    ("tools", "Tools & Cordage", "Lashing, cordage, knots, improvised tools"),
-    ("direction", "Direction Finding", "Celestial methods, improvised compass, offline map"),
-    ("signaling", "Signaling & Rescue", "Signals, codes, ground-air signals, aircraft vectoring"),
-    ("environments", "Environments", "Desert, tropical, cold weather, and sea modules"),
-    ("hazards", "Man-Made Hazards", "Shielding, decontamination, protected water, chemical release"),
-]
+from . import sections as _sections
+
+SECTIONS = [(r['id'], r['title'], r['scope']) for r in _sections.rows()]
 HEAD = '<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
 
 

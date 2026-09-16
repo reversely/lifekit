@@ -30,6 +30,7 @@ from pydantic import BaseModel
 
 from lifekit.library import chat as chats, loop, profile as profiles, provider, verdicts
 from lifekit.library.build import DB_PATH, connect
+from lifekit.packs import LOCAL_PACKS
 from lifekit.library.query import search, volumes_matching
 
 app = FastAPI(title="LifeKit API")
@@ -105,9 +106,15 @@ def health():
 
 @app.get("/api/config")
 def api_config():
-    from lifekit.library import zim
+    import csv
 
-    return {**provider.describe(), "zim": zim.describe()}
+    from lifekit.library import sections, zim
+
+    with (LOCAL_PACKS / "questions.tsv").open(newline="") as handle:
+        questions: dict[str, list[str]] = {}
+        for row in csv.DictReader(handle, delimiter="\t"):
+            questions.setdefault(row["kind"], []).append(row["text"])
+    return {**provider.describe(), "zim": zim.describe(), "sections": sections.rows(), "questions": questions}
 
 
 @app.get("/api/search")
