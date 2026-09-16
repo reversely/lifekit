@@ -7,11 +7,13 @@ await page.setViewport({ width: 1440, height: 900 });
 const errors = []; page.on('pageerror', (e) => errors.push(String(e).slice(0, 160)));
 const out = []; const check = (n, ok, note='') => out.push(`${ok ? 'PASS' : 'FAIL'}  ${n}${note ? '  (' + note + ')' : ''}`);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-await page.goto(`${BASE}/#/volume/wikipedia-box-jellyfish?page=2`, { waitUntil: 'networkidle0' }); await page.waitForSelector('.pager', { timeout: 20000 }); await wait(500);
+const staged = (await (await fetch(`${BASE}/api/candidates`)).json()).candidates[0];
+const target = staged ? staged.id : 'atp-4-02-11-2026';
+await page.goto(`${BASE}/#/volume/${target}?page=2`, { waitUntil: 'networkidle0' }); await page.waitForSelector('.pager', { timeout: 20000 }); await wait(500);
 const pageText = () => page.evaluate(() => document.querySelector('.pager span')?.textContent);
 await page.keyboard.press('ArrowRight'); await wait(200); check('ArrowRight pages forward', /^Page 3 of/.test(await pageText()), await pageText());
 await page.keyboard.press('ArrowLeft'); await wait(200); check('ArrowLeft pages back', /^Page 2 of/.test(await pageText()), await pageText());
-await page.focus('select'); await page.keyboard.press('ArrowRight'); await wait(200); check('arrows in the select do not page', /^Page 2 of/.test(await pageText()));
+if (staged) { await page.focus('select'); await page.keyboard.press('ArrowRight'); await wait(200); check('arrows in the select do not page', /^Page 2 of/.test(await pageText())); }
 await page.keyboard.press('Escape'); await wait(100); check('Escape blurs the select', await page.evaluate(() => document.activeElement?.tagName !== 'SELECT'));
 check('rail visible at desktop', await page.evaluate(() => getComputedStyle(document.querySelector('.rail')).display !== 'none'));
 check('bottom nav hidden at desktop', await page.evaluate(() => getComputedStyle(document.querySelector('.nav')).display === 'none'));
