@@ -1,0 +1,42 @@
+// Drive the five demo stations against a running instance and screenshot each.
+// Usage: BASE=http://host:8008 node demo-drive.mjs <outdir> <stamp>
+import puppeteer from 'puppeteer-core';
+const BASE = process.env.BASE ?? 'http://localhost:4173';
+const [outDir, stamp] = process.argv.slice(2);
+const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+const page = await browser.newPage();
+await page.setViewport({ width: 1440, height: 900 });
+const errors = [];
+page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const text = () => page.evaluate(() => document.body.innerText);
+const until = async (fn, tries = 120, ms = 2000) => { for (let i = 0; i < tries; i++) { if (await fn()) return true; await wait(ms); } return false; };
+const shot = (n) => page.screenshot({ path: `${outDir}/${stamp}_demo-${n}.png` });
+const say = (name, ok, note = '') => console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${note ? '  (' + note + ')' : ''}`);
+const next = async () => { await page.evaluate(() => [...document.querySelectorAll('.station-nav button')].find((b) => b.textContent.trim() === 'Next').click()); await wait(800); };
+
+await page.evaluate; await page.goto(`${BASE}/#/demo/1`, { waitUntil: 'networkidle0' }); await wait(1000);
+await page.evaluate(() => localStorage.removeItem('lifekit.questions'));
+say('station 1 asks the model on arrival', await until(async () => /ANSWER/i.test(await text()) && !/Asking…/.test(await text()), 60, 2000));
+say('station 1 answer names a page', /page \d+/i.test(await text()));
+await shot('1');
+await next();
+say('station 2 is offline', /Offline/.test(await text()));
+await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Ask').click()); await wait(500);
+say('station 2 stores the question', /stored in this browser/i.test(await text()));
+await shot('2');
+await next();
+say('station 3 runs the loop on arrival', await until(async () => /Working on:|Topic named|Sending stored/.test(await text()), 30, 1000));
+say('loop shows a topic step', await until(async () => /Topic named by the model/.test(await text()), 60, 2000));
+say('loop shows the offline search', await until(async () => /Searched wikipedia_en_all/.test(await text()), 60, 2000));
+say('loop shows the model pick and filing', await until(async () => /Model chose:/.test(await text()) && /Filed under/.test(await text()), 60, 2000));
+say('loop finishes with an answer or nothing found', await until(async () => /Answered from the new pages|Nothing found/.test(await text()) && !/Working…/.test(await text()), 180, 2000));
+await shot('3');
+await next(); await wait(2000);
+say('station 4 shows a packet', await until(async () => /Waiting for your verdict/i.test(await text()), 20, 1000));
+await shot('4');
+await next(); await wait(2000);
+say('station 5 shows a section', /volumes|New download|pages/.test(await text()));
+await shot('5');
+say('no page errors', errors.length === 0, errors[0] ?? '');
+await browser.close();

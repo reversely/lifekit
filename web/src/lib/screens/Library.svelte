@@ -45,6 +45,14 @@
         <div></div>
       </a>
     {/if}
+    <a class="row" href="#/demo/1">
+      <div></div>
+      <div>
+        <div class="t">How it works</div>
+        <div class="s">Five stations: ask, ask offline, the loop, your verdict, the binder.</div>
+      </div>
+      <div></div>
+    </a>
     <div class="label">CONTENTS</div>
     {#each list as s}
       <a class="row" href={`#/section/${s.id}`}>

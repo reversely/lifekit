@@ -126,3 +126,50 @@ export async function flush(): Promise<number> {
   }
   return items.length;
 }
+
+/** One record per loop step, as the server emits it. */
+export interface LoopEvent {
+  question: string;
+  step: string;
+  at: string;
+  text?: string;
+  origin?: string;
+  topic?: string;
+  source?: string;
+  titles?: string[];
+  section?: string;
+  volume?: string;
+  title?: string;
+  volumes?: string[];
+  answer?: string;
+  pages?: { title: string; page: number; volume: string; passage: string }[];
+  reason?: string;
+  error?: string;
+  done?: boolean;
+  note?: string;
+}
+
+/** Run the loop and receive each step as it happens. Resolves when the pass ends. */
+export async function syncStream(onEvent: (e: LoopEvent) => void): Promise<LoopEvent | null> {
+  const r = await fetch(`${BASE}/api/sync/stream`, { cache: 'no-store' });
+  if (!r.ok || !r.body) throw new Error(`sync: ${r.status}`);
+  const reader = r.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let last: LoopEvent | null = null;
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let index;
+    while ((index = buffer.indexOf('\n')) >= 0) {
+      const line = buffer.slice(0, index).trim();
+      buffer = buffer.slice(index + 1);
+      if (!line) continue;
+      const event = JSON.parse(line) as LoopEvent;
+      last = event;
+      onEvent(event);
+    }
+  }
+  return last;
+}

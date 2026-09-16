@@ -196,3 +196,22 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .thumb.tile.big .t { font-size: 10px; }
 .card .thumb.tile { grid-row: 1; }
 @media (max-width: 899px) { .vol-cols { display: contents; } }
+
+/* the demo route: a station strip above a real screen */
+.station { background: var(--surface); border-bottom: 1px solid var(--border); }
+.station .screen { padding-bottom: 0; }
+.station-head { padding: 28px 24px 18px; }
+.station-head .lab { display: block; font-size: 13px; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
+.station-head h2 { margin: 0 0 8px; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
+.station-head p { margin: 0 0 14px; font-size: 16px; line-height: 1.55; color: var(--text-2); max-width: 720px; }
+.station-nav { display: flex; gap: 8px; }
+.station-nav .chip:disabled { opacity: 0.4; cursor: default; }
+.demo .top { padding-top: 24px; }
+@media (min-width: 900px) { .station-head { padding-top: 36px; } }
+/* the loop's trail: one card per question, one line per step */
+.res.trail .step { font-size: 14.5px; color: var(--secondary); padding: 3px 0 3px 14px; border-left: 2px solid var(--border); }
+.res.trail .step.done { color: var(--text); border-left-color: var(--text); }
+.res.trail .step .inline { color: var(--text); text-decoration: underline; margin-left: 6px; }
+.res.trail .from { color: var(--muted); font-weight: 400; }
+.res.trail p { margin: 8px 0 4px 14px; }
+.res.trail .open { margin: 8px 8px 0 14px; }

@@ -228,8 +228,15 @@ def _record_learned(section: str, volume_id: str, candidate: dict, retrieved: st
         })
 
 
+_NOT_A_SUBJECT = re.compile(
+    r"\((?:\d{4} )?(?:film|novel|album|song|band|EP|TV series|television series|video game|comics|magazine|"
+    r"play|musical|poem|painting|character|episode)\)$|^\d{4} |^List of .* (?:episodes|characters)", re.I)
+
+
 def pick(ask, question: str, candidates: list[dict]) -> list[dict]:
-    """The model chooses which search hits would answer the question, at most two."""
+    """The model chooses which search hits would answer the question, at most two.
+    Titles that name a work, an episode, or a dated event never reach it."""
+    candidates = [c for c in candidates if not _NOT_A_SUBJECT.search(c["title"])]
     if not candidates:
         return []
     listing = "\n".join(f"{i + 1}. {c['title']}" for i, c in enumerate(candidates))
@@ -259,48 +266,63 @@ def choose_section(ask, prompt: str, question: str, topic: str) -> str:
 
 # -- the pass ------------------------------------------------------------------
 
-def work(db, ask, answer, covers=None, log=print) -> list[dict]:
+def work(db, ask, answer, covers=None, log=print, event=None) -> list[dict]:
     """Work every pending question once. `ask(system, user)` calls the model; `answer(db, question)`
-    returns (text, hits). Returns the digest entries produced."""
+    returns (text, hits). `event(dict)` receives one record per step as it happens, so a
+    screen can show the loop working. Returns the digest entries produced."""
     from .query import search
+
+    def emit(qid: str, step: str, **fields) -> None:
+        record = {"question": qid, "step": step, "at": now(), **fields}
+        if event:
+            event(record)
+        log(f"{qid}: {step} " + " ".join(f"{k}={v}" for k, v in fields.items() if k != "text"))
 
     digest = []
     examples = "".join(f"\nExample: {q} -> {s}" for q, s in filing_examples())
     for q in pending(db):
         qid, text = q["id"], q["text"]
+        emit(qid, "start", text=text, origin=q.get("origin"))
         topic = q.get("topic") or ask(TOPIC_PROMPT, text).strip().strip('."').lower()
         if not topic or topic == "none":
             set_state(db, qid, "exhausted", topic=topic)
-            log(f"{qid}: no topic")
+            emit(qid, "exhausted", reason="no topic")
             continue
         set_state(db, qid, "named", topic=topic)
+        emit(qid, "named", topic=topic)
         candidates = []
+        source = None
         if zim.available():
             try:
                 candidates = zim.search(topic)
+                source = zim.available().name
             except Exception as error:  # noqa: BLE001
-                log(f"{qid}: zim search failed {error}")
+                emit(qid, "search_failed", source="zim", error=str(error)[:120])
         if not candidates:
             try:
                 candidates = wikipedia_candidates(topic)
+                source = "en.wikipedia.org"
             except Exception as error:  # noqa: BLE001
-                log(f"{qid}: search failed {error}")
+                emit(qid, "search_failed", source="live", error=str(error)[:120])
                 continue
         set_state(db, qid, "searching")
+        emit(qid, "searched", source=source, titles=[c["title"] for c in candidates])
         candidates = pick(ask, text, candidates)
         if not candidates:
             set_state(db, qid, "exhausted")
-            log(f"{qid}: no article fits")
+            emit(qid, "exhausted", reason="no article fits")
             continue
+        emit(qid, "picked", titles=[c["title"] for c in candidates])
         section = choose_section(ask, SECTION_PROMPT + examples, text, topic)
+        emit(qid, "filed", section=section)
         pulled = []
         for candidate in candidates[:2]:
             try:
                 vid = pull_wikipedia(db, candidate, section, qid)
                 pulled.append(vid)
-                log(f"{qid}: pulled {vid} into {section}")
+                emit(qid, "pulled", volume=vid, title=candidate["title"], section=section)
             except Exception as error:  # noqa: BLE001
-                log(f"{qid}: pull failed {candidate['title']}: {error}")
+                emit(qid, "pull_failed", title=candidate["title"], error=str(error)[:120])
         if not pulled:
             set_state(db, qid, "exhausted")
             continue
@@ -308,6 +330,7 @@ def work(db, ask, answer, covers=None, log=print) -> list[dict]:
         if covers:
             for vid in pulled:
                 covers(vid)
+            emit(qid, "covered", volumes=pulled)
         # Re-ask with the topic's words beside the question's, so a source that spells or
         # names the thing differently ("tire" for "tyre") can still be found.
         from .covers import covered as is_covered, strip_verdict
@@ -320,6 +343,8 @@ def work(db, ask, answer, covers=None, log=print) -> list[dict]:
         db.execute("INSERT OR REPLACE INTO digest (question_id, answer, volumes, at) VALUES (?,?,?,?)",
                    (qid, text_answer, json.dumps(pulled), now()))
         db.commit()
+        emit(qid, "resolved" if covered else "exhausted", answer=text_answer[:400],
+             pages=[{"title": h["title"], "page": h["number"], "volume": h["volume"], "passage": h["passage"]} for h in hits[:2]])
         digest.append({"question": text, "answer": text_answer, "volumes": pulled, "state": "resolved" if covered else "exhausted"})
     return digest
 

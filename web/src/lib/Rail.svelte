@@ -41,6 +41,7 @@
     <a href="#/recent" class:on={screen === 'recent'}>Recent</a>
     <a href="#/search" class:on={screen === 'search'}>Search</a>
     <a href="#/digest" class:on={screen === 'digest'}>Digest</a>
+    <a href="#/demo/1" class:on={screen === 'demo'}>How it works</a>
   </nav>
   <div class="lab">Sections</div>
   <nav class="sections">

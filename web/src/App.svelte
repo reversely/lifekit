@@ -11,6 +11,7 @@
   import Search from './lib/screens/Search.svelte';
   import Volume from './lib/screens/Volume.svelte';
   import Digest from './lib/screens/Digest.svelte';
+  import Demo from './lib/screens/Demo.svelte';
   import Rail from './lib/Rail.svelte';
   import { forceOffline, online } from './lib/core/net';
   import { queued } from './lib/core/api';
@@ -59,6 +60,8 @@
   <Search {db} initial={params.get('q') ?? ''} />
 {:else if screen === 'digest'}
   <Digest />
+{:else if screen === 'demo'}
+  <Demo {db} step={Number(parts[1] ?? 1)} />
 {:else if screen === 'welcome'}
   <Welcome />
 {:else if screen === 'profile'}

@@ -10,6 +10,7 @@ Endpoints
   POST /api/answer  {question, tag}   model answer that quotes passages, or a stored question
   POST /api/questions {text}          store a question (the client is offline, or nothing answered)
   POST /api/sync                       work stored questions: name, find, pull, re-ask
+  GET  /api/sync/stream                the same pass, one JSON record per step as it happens
   GET  /api/digest                     what arrived and what got answered, newest first
   GET  /api/library.sqlite             the current database, for the app to (re)load
   GET  /api/profile                    the household profile and the onboarding questions
@@ -158,6 +159,42 @@ def api_verdict(body: Verdict):
         return verdicts.apply(db(), body.volume, body.verdict, body.section)
     except (ValueError, KeyError) as error:
         return {"error": str(error)}
+
+
+@app.get("/api/sync/stream")
+def api_sync_stream():
+    """The same pass as POST /api/sync, streamed as one JSON record per line while
+    the loop works, so the screen can show each step. Ends with a {"done": ...} line."""
+    import queue
+    import threading
+
+    from fastapi.responses import StreamingResponse
+
+    def generate():
+        if not provider.loop_enabled():
+            yield json.dumps({"done": True, "digest": [], "note": "The loop is off on this instance."}) + "\n"
+            return
+        events: "queue.Queue[dict | None]" = queue.Queue()
+        result: dict = {}
+
+        def run():
+            try:
+                connection = db()  # sqlite connections stay on the thread that made them
+                result["digest"] = loop.work(connection, _ask, _answer, covers=_cover, log=lambda _: None, event=events.put)
+            except Exception as error:  # noqa: BLE001
+                result["error"] = str(error)
+            finally:
+                events.put(None)
+
+        threading.Thread(target=run, daemon=True).start()
+        while True:
+            record = events.get()
+            if record is None:
+                break
+            yield json.dumps(record) + "\n"
+        yield json.dumps({"done": True, "digest": result.get("digest", []), "error": result.get("error"), "pending": loop.pending(db())}) + "\n"
+
+    return StreamingResponse(generate(), media_type="application/x-ndjson", headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
 
 
 @app.get("/api/digest")

@@ -1,11 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { config as fetchConfig, digest as fetchDigest, flush, queued, sync, type Config, type Digest } from '../core/api';
+  import { config as fetchConfig, digest as fetchDigest, flush, queued, syncStream, type Config, type Digest, type LoopEvent } from '../core/api';
+  import LoopTrail from '../LoopTrail.svelte';
   import { online } from '../core/net';
 
   let data: Digest | null = null;
   let cfg: Config | null = null;
   let status = '';
+  let events: LoopEvent[] = [];
   let working = false;
   $: pending = queued();
 
@@ -24,12 +26,14 @@
 
   async function runSync() {
     working = true;
-    status = 'Sending stored questions…';
+    status = '';
+    events = [];
     try {
       const n = await flush();
-      status = n ? `${n} question${n === 1 ? '' : 's'} sent. Finding sources…` : 'Finding sources…';
-      const result = await sync();
-      status = result.events.join('. ') || 'Nothing to work.';
+      status = n ? `${n} question${n === 1 ? '' : 's'} sent.` : '';
+      const last = await syncStream((e) => (events = [...events, e]));
+      if (last?.note) status = last.note;
+      else if (!events.some((e) => !e.done)) status = 'Nothing to work.';
       await load();
       dispatchEvent(new CustomEvent('lifekit:reload'));
     } catch (e) {
@@ -62,6 +66,7 @@
       <button class="res sync" on:click={runSync} disabled={working}>{working ? 'Working…' : 'Sync now'}</button>
     </div>
     {#if status}<div class="hint">{status}</div>{/if}
+    {#if events.length || working}<div class="group">The loop, step by step</div><LoopTrail {events} {working} />{/if}
   {:else}
     <div class="hint">Questions wait here until the network returns.</div>
   {/if}
