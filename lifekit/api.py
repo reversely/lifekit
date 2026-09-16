@@ -211,17 +211,9 @@ def api_thumb(volume_id: str):
 
 
 # The built web app, when present, so one process serves an instance. The SQLite
-# wasm needs cross-origin isolation, hence the two headers on every response.
+# wasm loads the database into memory and needs no cross-origin isolation, and a
+# box serves plain HTTP on a LAN address where Chrome would ignore the headers.
 if WEB_DIST.is_dir():
-    from starlette.middleware.base import BaseHTTPMiddleware
     from starlette.staticfiles import StaticFiles
 
-    class _Isolation(BaseHTTPMiddleware):
-        async def dispatch(self, request, call_next):
-            response = await call_next(request)
-            response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
-            response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
-            return response
-
-    app.add_middleware(_Isolation)
     app.mount("/", StaticFiles(directory=WEB_DIST, html=True), name="web")
