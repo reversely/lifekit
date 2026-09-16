@@ -91,8 +91,7 @@
 {#if v}
   <div class="screen vol">
     <div class="top">
-      <a class="back" href="#/recent">‹ Recent</a>
-      <h1 class="vol-title">{v.title}</h1>
+            <h1 class="vol-title">{v.title}</h1>
       <span class="sub">{v.publisher}, {v.edition}</span>
       {#if v.admission === 'staged'}<span class="tag new block">New download</span>{/if}
     </div>

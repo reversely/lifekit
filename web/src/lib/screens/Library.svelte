@@ -1,12 +1,20 @@
 <script lang="ts">
+  // The contents directory on parchment, from the flux Encyclopedia directory: a numeral,
+  // the title on a gold rule, the scope line, and a Feather icon per section.
   import { onMount } from 'svelte';
   import type { Database } from '../core/db';
   import { shelves } from '../core/queries';
   import { digest as fetchDigest, profile as fetchProfile } from '../core/api';
+  import Icon from '../Icon.svelte';
   export let db: Database;
   $: list = shelves(db);
   let line = '';
   let summary: string | null = null;
+
+  const ICONS: Record<string, string> = {
+    medicine: 'heart', shelter: 'home', fire: 'zap', water: 'droplet', food: 'target', 'poisonous-plants': 'alert-circle',
+    animals: 'alert-triangle', tools: 'tool', direction: 'compass', signaling: 'radio', environments: 'globe', hazards: 'shield',
+  };
 
   onMount(async () => {
     try {
@@ -30,7 +38,6 @@
 
 <div class="dir">
   <div class="screen">
-    <div class="top"><h1>Library</h1></div>
     <div class="digest">
       <h2>Since you were last online</h2>
       <p>{line || '…'}</p>
@@ -42,7 +49,7 @@
           <div class="t">{summary ? 'Profile' : 'Set up your profile'}</div>
           <div class="s">{summary || 'Where you live, what you do, who is with you.'}</div>
         </div>
-        <div></div>
+        <div class="ic"><Icon name="user" size={18} /></div>
       </a>
     {/if}
     <a class="row" href="#/demo/1">
@@ -51,7 +58,7 @@
         <div class="t">How it works</div>
         <div class="s">Five stations: ask, ask offline, the loop, your verdict, the binder.</div>
       </div>
-      <div></div>
+      <div class="ic"><Icon name="help-circle" size={18} /></div>
     </a>
     <div class="label">CONTENTS</div>
     {#each list as s}
@@ -62,7 +69,7 @@
           <div class="s">{s.scopeLine}</div>
           {#if s.count}<div class="c some">{s.count} volumes</div>{:else}<div class="c">none yet</div>{/if}
         </div>
-        <div></div>
+        <div class="ic"><Icon name={ICONS[s.id] ?? 'book-open'} size={18} /></div>
       </a>
     {/each}
   </div>

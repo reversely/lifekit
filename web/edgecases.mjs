@@ -13,8 +13,8 @@ const check = (name, ok, note = '') => results.push(`${ok ? 'PASS' : 'FAIL'}  ${
 const go = async (hash, sel = 'body') => { await page.goto(`${BASE}/${hash}`, { waitUntil: 'networkidle0' }); await page.waitForSelector(sel, { timeout: 20000 }); await new Promise((r) => setTimeout(r, 300)); };
 const noHScroll = async () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
 
-await go('#/', '.row');
-check('directory renders twelve rows', (await page.$$eval('.row:not(.profile)', (e) => e.length)) === 12);
+await go('#/library', '.row');
+check('directory renders twelve rows', (await page.$$eval('.row .n', (e) => e.filter((n) => n.textContent.trim()).length)) === 12);
 check('directory: no horizontal scroll', await noHScroll());
 
 await go('#/search', '.bar input');

@@ -33,8 +33,7 @@
 
 <div class="screen">
   <div class="top">
-    <a class="back" href="#/">‹ Library</a>
-    <h1>Profile</h1>
+        <h1>Profile</h1>
     <span class="sub">{data?.summary || 'Not set up yet'}</span>
   </div>
 

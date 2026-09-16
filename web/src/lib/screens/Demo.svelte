@@ -110,7 +110,7 @@
           {#if step < 5}
             <button class="chip ask" on:click={() => go(step + 1)}>Next</button>
           {:else}
-            <a class="chip ask" href="#/">Open the library</a>
+            <a class="chip ask" href="#/library">Open the library</a>
           {/if}
         </div>
       </div>

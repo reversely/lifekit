@@ -3,7 +3,7 @@ const BASE = process.env.BASE ?? 'http://localhost:4173';
 const [outDir, stamp] = process.argv.slice(2);
 const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
 const V = { desktop: { width: 1440, height: 900, deviceScaleFactor: 1 }, break: { width: 900, height: 900, deviceScaleFactor: 1 }, phone: { width: 390, height: 1400, deviceScaleFactor: 2, isMobile: true, hasTouch: true } };
-const routes = [['library', '#/'], ['recent', '#/recent'], ['section-water', '#/section/water'], ['search', '#/search?q=how%20much%20bleach%20for%20a%20gallon'], ['volume', '#/volume/wikipedia-bee-sting?page=2'], ['digest', '#/digest'], ['profile', '#/profile'], ['welcome', '#/welcome']];
+const routes = [['home', '#/'], ['library', '#/library'], ['recent', '#/recent'], ['section-water', '#/section/water'], ['search', '#/search?q=how%20much%20bleach%20for%20a%20gallon'], ['volume', '#/volume/wikipedia-bee-sting?page=2'], ['digest', '#/digest'], ['profile', '#/profile'], ['welcome', '#/welcome']];
 const errors = [];
 for (const [vn, vp] of Object.entries(V)) for (const [name, route] of routes) {
   const page = await browser.newPage();

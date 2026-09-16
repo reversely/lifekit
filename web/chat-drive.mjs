@@ -47,7 +47,7 @@ await page.evaluate(() => document.querySelector('.rail .net, .rail button.net')
 await shot('4-offline');
 await page.setViewport({ width: 390, height: 1100, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); await wait(1500);
 await page.goto(`${BASE}/?phone#/chat`, { waitUntil: 'networkidle0' }); await wait(1200);
-say('phone shows the chat with the nav', !!(await page.$('.input-row input')) && await page.evaluate(() => getComputedStyle(document.querySelector('.nav')).display !== 'none'));
+say('phone shows the chat with the top bar', !!(await page.$('.input-row input')) && await page.evaluate(() => getComputedStyle(document.querySelector('.topbar')).display !== 'none'));
 say('phone: no horizontal scroll', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
 await shot('5-phone');
 say('no page errors', errors.length === 0, errors[0] ?? '');

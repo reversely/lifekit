@@ -50,7 +50,7 @@
 
   function skip() {
     finish();
-    location.hash = '#/';
+    location.hash = '#/library';
   }
 
   async function start() {

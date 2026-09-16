@@ -16,7 +16,7 @@ await page.keyboard.press('ArrowLeft'); await wait(200); check('ArrowLeft pages 
 if (staged) { await page.focus('select'); await page.keyboard.press('ArrowRight'); await wait(200); check('arrows in the select do not page', /^Page 2 of/.test(await pageText())); }
 await page.keyboard.press('Escape'); await wait(100); check('Escape blurs the select', await page.evaluate(() => document.activeElement?.tagName !== 'SELECT'));
 check('rail visible at desktop', await page.evaluate(() => getComputedStyle(document.querySelector('.rail')).display !== 'none'));
-check('bottom nav hidden at desktop', await page.evaluate(() => getComputedStyle(document.querySelector('.nav')).display === 'none'));
+check('top bar icon row hidden at desktop', await page.evaluate(() => [...document.querySelectorAll('.topbar .actions .action:not(.net)')].every((a) => getComputedStyle(a).display === 'none')));
 check('panel is sticky', await page.evaluate(() => getComputedStyle(document.querySelector('.vol-panel')).position === 'sticky'));
 check('thumbnail shows a loaded image or the tile', await page.evaluate(() => { const img = document.querySelector('img.thumb'); return !!document.querySelector('.thumb.tile') || (!!img && img.complete && img.naturalWidth > 0); }));
 check('article column capped', await page.evaluate(() => document.querySelector('.vol-article').getBoundingClientRect().width <= 720));
@@ -28,7 +28,7 @@ await page.goto(`${BASE}/#/recent`, { waitUntil: 'networkidle0' }); await page.w
 check('three cards per row at 1440', await page.evaluate(() => getComputedStyle(document.querySelector('.grid')).gridTemplateColumns.split(' ').length === 3));
 await page.setViewport({ width: 390, height: 1100, isMobile: true, deviceScaleFactor: 2 }); await page.waitForSelector('.grid .card', { timeout: 20000 }); await wait(300);
 check('rail hidden on phone', await page.evaluate(() => getComputedStyle(document.querySelector('.rail')).display === 'none'));
-check('bottom nav shown on phone', await page.evaluate(() => getComputedStyle(document.querySelector('.nav')).display !== 'none'));
+check('top bar shown on phone', await page.evaluate(() => getComputedStyle(document.querySelector('.topbar')).display !== 'none'));
 check('one card per row on phone', await page.evaluate(() => getComputedStyle(document.querySelector('.grid')).gridTemplateColumns.split(' ').length === 1));
 // offline switch from the rail
 await page.setViewport({ width: 1440, height: 900 }); await page.waitForSelector('.rail .net', { timeout: 20000 }); await wait(300);

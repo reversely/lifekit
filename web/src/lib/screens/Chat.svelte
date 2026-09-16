@@ -1,8 +1,9 @@
 <script lang="ts">
-  // One chat thread, carried over from the flux chat screen: the transcript, an input
-  // row pinned to the bottom, a link to the saved chats.
+  // One chat thread, from the flux chat screen: the transcript above an input row pinned
+  // to the bottom. The top bar carries the title, back, and the link to saved chats.
   import { afterUpdate, onMount } from 'svelte';
   import ChatMessage from '../ChatMessage.svelte';
+  import Icon from '../Icon.svelte';
   import { activeId, open, send, startNew, threads } from '../core/chat';
   import { online } from '../core/net';
   export let id: string | null = null;
@@ -34,16 +35,6 @@
 </script>
 
 <div class="screen chat">
-  <div class="top chat-top">
-    <div>
-      <h1>Chat</h1>
-      <span class="sub">{$online ? 'Online' : 'Offline'}, answers quote the library</span>
-    </div>
-    <div class="chat-links">
-      <a class="chip" href="#/chats">Chats</a>
-      <button class="chip" on:click={() => { startNew(); location.hash = '#/chat'; }}>New</button>
-    </div>
-  </div>
   <div class="thread" bind:this={list}>
     {#if !messages.length}
       <div class="hint">Ask about a situation: bleeding, shelter, fire, water, food, animals, rope work, finding your way.</div>
@@ -55,7 +46,7 @@
   <div class="input-area">
     <div class="input-row">
       <input bind:value={draft} placeholder="Ask a question" aria-label="Ask a question" on:keydown={(e) => e.key === 'Enter' && submit()} />
-      <button class="send" aria-label="Send" disabled={!draft.trim() || sending} on:click={() => submit()}>↑</button>
+      <button class="send" aria-label="Send" disabled={!draft.trim() || sending} on:click={() => submit()}><Icon name="arrow-up" /></button>
     </div>
   </div>
 </div>

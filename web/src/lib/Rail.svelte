@@ -1,11 +1,13 @@
 <script lang="ts">
-  // The desktop side rail: the four screens, the twelve sections with counts, the profile
-  // line, and the network switch. Hidden below 900 px, where the bottom nav serves.
+  // The desktop side rail, in the biome: the wordmark, the screens, the twelve sections
+  // with counts, the profile line, and the network switch. Hidden below 900 px, where
+  // the top bar serves.
   import { onMount } from 'svelte';
   import type { Database } from './core/db';
   import { shelves } from './core/queries';
   import { config as fetchConfig, profile as fetchProfile } from './core/api';
   import { forceOffline, online } from './core/net';
+  import Icon from './Icon.svelte';
   export let db: Database;
   export let screen: string;
   export let sectionId: string | null = null;
@@ -35,13 +37,13 @@
 </script>
 
 <aside class="rail" aria-label="Sections and screens">
-  <a class="brand" href="#/">LifeKit</a>
+  <a class="brand" href="#/" class:on={screen === ''}>LifeKit</a>
   <nav class="screens">
-    <a href="#/chat" class:on={screen === 'chat' || screen === 'chats'}>Chat</a>
-    <a href="#/" class:on={screen === ''}>Library</a>
+    <a href="#/library" class:on={screen === 'library'}>Library</a>
     <a href="#/recent" class:on={screen === 'recent'}>Recent</a>
     <a href="#/search" class:on={screen === 'search'}>Search</a>
     <a href="#/digest" class:on={screen === 'digest'}>Digest</a>
+    <a href="#/chats" class:on={screen === 'chat' || screen === 'chats'}>Chats</a>
     <a href="#/demo/1" class:on={screen === 'demo'}>How it works</a>
   </nav>
   <div class="lab">Sections</div>
@@ -60,7 +62,7 @@
       </a>
     {/if}
     <button class="net" class:off={!$online} on:click={() => forceOffline.update((v) => !v)} title={$forceOffline ? 'Back online' : 'Simulate offline'}>
-      <span class="dot"></span>{$online ? 'Online' : 'Offline'}
+      <Icon name={$online ? 'wifi' : 'wifi-off'} size={16} />{$online ? 'Online' : 'Offline'}
     </button>
     {#if model}<div class="model">{model}</div>{/if}
   </div>

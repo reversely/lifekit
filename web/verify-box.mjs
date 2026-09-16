@@ -118,7 +118,7 @@ await page.keyboard.press('ArrowLeft'); await wait(300);
 check('ArrowLeft goes back', /Page 10 of/.test(await text()));
 
 // 10. rail section link and counts
-await go('#/', '.row');
+await go('#/library', '.row');
 await page.evaluate(() => document.querySelector('.rail a[href="#/section/water"]').click()); await wait(600);
 check('rail section link opens the section', /#\/section\/water/.test(await page.evaluate(() => location.hash)) && /Water/.test(await text()));
 check('section grid is three across on desktop', await page.evaluate(() => { const g = document.querySelector('.grid'); return !!g && getComputedStyle(g).gridTemplateColumns.split(' ').length === 3; }));
@@ -133,14 +133,14 @@ check('profile change seeds a question when a rule matches', toggled && afterQ >
 await clickText('button', 'Boating'); await wait(500); // restore
 
 // 12. welcome routing does not loop for a set profile
-await go('#/', '.row');
+await go('#/', '.wordmark');
 check('a set profile does not route to Welcome', !/#\/welcome/.test(await page.evaluate(() => location.hash)));
 
 // 13. phone width still has the bottom nav and no rail
 await page.setViewport({ width: 390, height: 1100, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); // Chrome reloads on the emulation change
 await wait(1500);
 await go('?phone#/recent', '.card');
-check('phone hides the rail and shows the nav', await page.evaluate(() => { const r = document.querySelector('.rail'); const n = document.querySelector('.nav'); return (!r || getComputedStyle(r).display === 'none') && n && getComputedStyle(n).display !== 'none'; }));
+check('phone hides the rail and shows the top bar', await page.evaluate(() => { const r = document.querySelector('.rail'); const n = document.querySelector('.topbar'); return (!r || getComputedStyle(r).display === 'none') && n && getComputedStyle(n).display !== 'none'; }));
 check('phone: no horizontal scroll', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
 await shot('5-phone-recent');
 

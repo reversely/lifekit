@@ -16,7 +16,7 @@
 </script>
 
 {#if !section}
-  <div class="screen"><div class="top"><h1>No such section</h1><a class="back" href="#/">‹ Library</a></div></div>
+  <div class="screen"><div class="hint">No such section.</div></div>
 {:else}
 <div class="screen">
   <div class="top"><h1>{index + 1}. {section.title}</h1><span class="sub">{section.scope}</span></div>
