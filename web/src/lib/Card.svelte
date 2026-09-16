@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Volume } from './core/types';
+  import Thumb from './Thumb.svelte';
   export let volume: Volume;
   export let showTags = true;
 
@@ -16,7 +17,7 @@
 
 <a class="card" href={`#/volume/${volume.id}`}>
   <div class="head">
-    <img class="thumb" src={`/thumbs/${volume.id}.png`} alt="" />
+    <Thumb id={volume.id} title={volume.title} publisher={volume.publisher} />
     <div>
       <h2 title={volume.title}>{shortTitle(volume.title)}</h2>
       <div class="ed">{volume.publisher}, {volume.edition}</div>

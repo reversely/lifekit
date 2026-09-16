@@ -1,0 +1,37 @@
+// Keyboard and fallback checks on the built app at desktop width.
+import puppeteer from 'puppeteer-core';
+const BASE = process.env.BASE ?? 'http://localhost:4173';
+const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+const page = await browser.newPage();
+await page.setViewport({ width: 1440, height: 900 });
+const errors = []; page.on('pageerror', (e) => errors.push(String(e).slice(0, 160)));
+const out = []; const check = (n, ok, note='') => out.push(`${ok ? 'PASS' : 'FAIL'}  ${n}${note ? '  (' + note + ')' : ''}`);
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+await page.goto('${BASE}/#/volume/wikipedia-bee-sting?page=2', { waitUntil: 'networkidle0' }); await page.waitForSelector('.pager', { timeout: 20000 }); await wait(500);
+const pageText = () => page.evaluate(() => document.querySelector('.pager span')?.textContent);
+await page.keyboard.press('ArrowRight'); await wait(200); check('ArrowRight pages forward', (await pageText()) === 'Page 3 of 7', await pageText());
+await page.keyboard.press('ArrowLeft'); await wait(200); check('ArrowLeft pages back', (await pageText()) === 'Page 2 of 7', await pageText());
+await page.focus('select'); await page.keyboard.press('ArrowRight'); await wait(200); check('arrows in the select do not page', (await pageText()) === 'Page 2 of 7');
+await page.keyboard.press('Escape'); await wait(100); check('Escape blurs the select', await page.evaluate(() => document.activeElement?.tagName !== 'SELECT'));
+check('rail visible at desktop', await page.evaluate(() => getComputedStyle(document.querySelector('.rail')).display !== 'none'));
+check('bottom nav hidden at desktop', await page.evaluate(() => getComputedStyle(document.querySelector('.nav')).display === 'none'));
+check('panel is sticky', await page.evaluate(() => getComputedStyle(document.querySelector('.vol-panel')).position === 'sticky'));
+check('thumbnail fallback tile shown', await page.evaluate(() => !!document.querySelector('.thumb.tile') && !document.querySelector('img.thumb')));
+check('article column capped', await page.evaluate(() => document.querySelector('.vol-article').getBoundingClientRect().width <= 720));
+await page.goto('${BASE}/#/search', { waitUntil: 'networkidle0' }); await page.waitForSelector('.bar input', { timeout: 20000 }); await wait(300);
+await page.keyboard.press('/'); await wait(100); check('slash focuses the search box', await page.evaluate(() => document.activeElement?.tagName === 'INPUT'));
+await page.keyboard.type('tick'); await wait(300); check('typed query lands in the box without the slash', await page.evaluate(() => document.querySelector('.bar input').value === 'tick'));
+await page.keyboard.press('Tab'); await wait(100); check('focus ring on the keyboard-focused element', await page.evaluate(() => { const s = getComputedStyle(document.activeElement); return s.outlineStyle === 'solid' && parseInt(s.outlineWidth) >= 2; }), await page.evaluate(() => document.activeElement.tagName + ' ' + getComputedStyle(document.activeElement).outlineStyle));
+await page.goto('${BASE}/#/recent', { waitUntil: 'networkidle0' }); await page.waitForSelector('.grid .card', { timeout: 20000 }); await wait(300);
+check('three cards per row at 1440', await page.evaluate(() => getComputedStyle(document.querySelector('.grid')).gridTemplateColumns.split(' ').length === 3));
+await page.setViewport({ width: 390, height: 1100, isMobile: true, deviceScaleFactor: 2 }); await page.waitForSelector('.grid .card', { timeout: 20000 }); await wait(300);
+check('rail hidden on phone', await page.evaluate(() => getComputedStyle(document.querySelector('.rail')).display === 'none'));
+check('bottom nav shown on phone', await page.evaluate(() => getComputedStyle(document.querySelector('.nav')).display !== 'none'));
+check('one card per row on phone', await page.evaluate(() => getComputedStyle(document.querySelector('.grid')).gridTemplateColumns.split(' ').length === 1));
+// offline switch from the rail
+await page.setViewport({ width: 1440, height: 900 }); await page.waitForSelector('.rail .net', { timeout: 20000 }); await wait(300);
+await page.click('.rail .net'); await wait(300); check('rail switch turns offline', await page.evaluate(() => document.querySelector('.rail .net').textContent.trim() === 'Offline'));
+await page.click('.rail .net'); await wait(300); check('rail switch turns back online', await page.evaluate(() => document.querySelector('.rail .net').textContent.trim() === 'Online'));
+check('no page errors', errors.length === 0, errors.join(' | '));
+console.log(out.join('\n'));
+await browser.close();

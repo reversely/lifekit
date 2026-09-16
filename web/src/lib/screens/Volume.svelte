@@ -4,7 +4,10 @@
   import { SECTIONS } from '../core/types';
   import { candidates as fetchCandidates, verdict as sendVerdict, type Candidate } from '../core/api';
   import { onMount } from 'svelte';
+  import Thumb from '../Thumb.svelte';
   export let db: Database;
+
+  let filingSelect: HTMLSelectElement | null = null;
 
   let candidate: Candidate | null = null;
   let filing: string | null = null;
@@ -43,6 +46,24 @@
 
   $: id, v, loadCandidate();
   onMount(loadCandidate);
+
+  /** Keys: A admits, R refiles when the select differs, Escape blurs; arrows page. */
+  function keys(e: KeyboardEvent) {
+    const target = e.target as HTMLElement | null;
+    const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
+    const inSelect = target && target.tagName === 'SELECT';
+    if (e.key === 'Escape') {
+      target?.blur();
+      return;
+    }
+    if (typing || inSelect) return;
+    if (e.key === 'ArrowLeft' && current > 1) current -= 1;
+    else if (e.key === 'ArrowRight' && current < total) current += 1;
+    else if (v?.admission === 'staged' && !judging && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (e.key === 'a' || e.key === 'A') judge('admit');
+      else if ((e.key === 'r' || e.key === 'R') && filing && filing !== candidate?.section) judge('refile');
+    }
+  }
   export let id: string;
   export let initialPage = 1;
   export let highlight: string | null = null;
@@ -64,14 +85,18 @@
     : [];
 </script>
 
+<svelte:window on:keydown={keys} />
+
 {#if v}
-  <div class="screen">
+  <div class="screen vol">
     <div class="top">
       <a class="back" href="#/recent">‹ Recent</a>
       <h1 class="vol-title">{v.title}</h1>
       <span class="sub">{v.publisher}, {v.edition}</span>
       {#if v.admission === 'staged'}<span class="tag new block">New download</span>{/if}
     </div>
+    <div class="vol-cols">
+    <aside class="vol-panel">
     {#if v.admission === 'staged'}
       <div class="group">Waiting for your verdict</div>
       <div class="res packet">
@@ -84,13 +109,13 @@
         {/if}
         <div class="filing">
           <span class="src">Filed under</span>
-          <select bind:value={filing}>
+          <select bind:value={filing} bind:this={filingSelect} aria-label="Filed under">
             {#each SECTIONS as s}<option value={s.id}>{s.title}</option>{/each}
           </select>
         </div>
         <div class="verdicts">
-          <button class="chip ask" disabled={judging} on:click={() => judge('admit')}>Admit</button>
-          <button class="chip" disabled={judging || !filing || filing === candidate?.section} on:click={() => judge('refile')}>Refile</button>
+          <button class="chip ask" disabled={judging} on:click={() => judge('admit')} title="A">Admit</button>
+          <button class="chip" disabled={judging || !filing || filing === candidate?.section} on:click={() => judge('refile')} title="R">Refile</button>
           <button class="chip" disabled={judging} on:click={() => judge('reject')}>Reject</button>
         </div>
         {#if note}<div class="src">{note}</div>{/if}
@@ -99,7 +124,7 @@
       <div class="hint">{note}</div>
     {/if}
     <div class="vol-head">
-      <img class="thumb big" src={`/thumbs/${v.id}.png`} alt="" />
+      <Thumb id={v.id} title={v.title} publisher={v.publisher} big />
       <div>
         <p class="cover">{v.cover}</p>
         <div class="tags">
@@ -114,7 +139,8 @@
         </div>
       </div>
     </div>
-
+    </aside>
+    <div class="vol-article">
     {#if contents.length > 1}
       <div class="group">Contents</div>
       <div class="contents">
@@ -136,6 +162,8 @@
         {/each}
       </div>
     {/if}
+    </div>
+    </div>
   </div>
 {:else}
   <div class="screen"><div class="top"><h1>Not in the library</h1></div></div>

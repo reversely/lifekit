@@ -11,6 +11,7 @@
   import Search from './lib/screens/Search.svelte';
   import Volume from './lib/screens/Volume.svelte';
   import Digest from './lib/screens/Digest.svelte';
+  import Rail from './lib/Rail.svelte';
   import { forceOffline, online } from './lib/core/net';
   import { queued } from './lib/core/api';
 
@@ -43,6 +44,10 @@
   $: screen = parts[0] ?? '';
 </script>
 
+{#if db}
+  <Rail {db} {screen} sectionId={parts[1] ?? null} />
+{/if}
+<main class="main" class:paper={screen === ''}>
 {#if !db}
   <div class="screen"><div class="top"><h1>Library</h1><span class="sub">Opening…</span></div></div>
 {:else if screen === 'recent'}
@@ -62,6 +67,7 @@
 {:else}
   <Library {db} />
 {/if}
+</main>
 
 <nav class="nav" class:paper={screen === ''}>
   <a href="#/" class:on={screen === ''}>Library</a>

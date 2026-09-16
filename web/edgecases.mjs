@@ -1,6 +1,7 @@
 // Edge cases through the built app in a real Chrome. Prints one line per case: PASS or FAIL
 // with what was observed. Usage: node edgecases.mjs
 import puppeteer from 'puppeteer-core';
+const BASE = process.env.BASE ?? 'http://localhost:4173';
 const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
 const page = await browser.newPage();
 await page.setViewport({ width: 390, height: 1100, deviceScaleFactor: 1, isMobile: true });
@@ -9,11 +10,11 @@ page.on('pageerror', (e) => errors.push(String(e).slice(0, 160)));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 160)); });
 const results = [];
 const check = (name, ok, note = '') => results.push(`${ok ? 'PASS' : 'FAIL'}  ${name}${note ? '  (' + note + ')' : ''}`);
-const go = async (hash, sel = 'body') => { await page.goto(`http://localhost:4173/${hash}`, { waitUntil: 'networkidle0' }); await page.waitForSelector(sel, { timeout: 20000 }); await new Promise((r) => setTimeout(r, 300)); };
+const go = async (hash, sel = 'body') => { await page.goto(`${BASE}/${hash}`, { waitUntil: 'networkidle0' }); await page.waitForSelector(sel, { timeout: 20000 }); await new Promise((r) => setTimeout(r, 300)); };
 const noHScroll = async () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
 
 await go('#/', '.row');
-check('directory renders twelve rows', (await page.$$eval('.row', (e) => e.length)) === 12);
+check('directory renders twelve rows', (await page.$$eval('.row:not(.profile)', (e) => e.length)) === 12);
 check('directory: no horizontal scroll', await noHScroll());
 
 await go('#/search', '.bar input');

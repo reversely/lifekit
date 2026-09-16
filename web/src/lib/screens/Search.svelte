@@ -44,13 +44,24 @@
   $: hits = query.trim() ? search(db, query, { tag: active ?? undefined }) : [];
   $: vols = query.trim() ? matchingVolumes(db, query) : [];
 
+  let box: HTMLInputElement | null = null;
+  function keys(e: KeyboardEvent) {
+    const target = e.target as HTMLElement | null;
+    const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT');
+    if (e.key === '/' && !typing) {
+      e.preventDefault();
+      box?.focus();
+    }
+  }
   const short = (text: string) => (text || '').replace(/\n/g, ' ').split(/(?<=[.!?])\s+/).slice(0, 2).join(' ');
 </script>
+
+<svelte:window on:keydown={keys} />
 
 <div class="screen">
   <div class="top"><h1>Search</h1></div>
   <div class="bar">
-    <input bind:value={query} placeholder="Ask the library" on:keydown={(e) => e.key === 'Enter' && ask()} />
+    <input bind:value={query} bind:this={box} placeholder="Ask the library" aria-label="Ask the library" on:keydown={(e) => e.key === 'Enter' && ask()} />
     {#if query}<button class="x" on:click={() => ((query = ''), (reply = null), (stored = null))}>×</button>{/if}
   </div>
   <div class="askrow">
