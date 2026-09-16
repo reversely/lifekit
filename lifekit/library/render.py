@@ -129,29 +129,58 @@ def thumbnail(volume_id: str, fmt: str, title: str = "", publisher: str = "", ou
         else:
             from PIL import Image, ImageDraw, ImageFont
 
-            img = Image.new("RGB", (240, 330), "#18181b")
+            # A placeholder cover: a grey book on white, a darker spine on the left with
+            # the title along it, the title centred in light uppercase letterspaced type,
+            # the publisher smaller beneath.
+            W, H = 240, 330
+            img = Image.new("RGB", (W, H), "#ffffff")
             draw = ImageDraw.Draw(img)
             try:
-                face = str(_FONT) if _FONT.exists() else "/System/Library/Fonts/Helvetica.ttc"
-                small = ImageFont.truetype(face, 18)
-                big = ImageFont.truetype(face, 26)
+                face = str(_FONT.with_name("Aeonik-Regular.ttf")) if _FONT.with_name("Aeonik-Regular.ttf").exists() else str(_FONT)
+                title_font = ImageFont.truetype(face, 17)
+                small = ImageFont.truetype(face, 11)
+                spine_font = ImageFont.truetype(face, 9)
             except OSError:
-                small = big = ImageFont.load_default()
-            draw.rectangle([0, 0, 239, 329], outline="#3f3f46")
-            draw.text((18, 20), (publisher or "").split(",")[0][:22], fill="#a1a1aa", font=small)
-            y = 70
+                title_font = small = spine_font = ImageFont.load_default()
+            book = (28, 18, 216, 314)
+            draw.rectangle((book[0] + 4, book[1] + 6, book[2] + 4, book[3] + 6), fill="#e6e6e6")  # shadow
+            draw.rectangle(book, fill="#4f4f4f")
+            spine = (book[0], book[1], book[0] + 22, book[3])
+            draw.rectangle(spine, fill="#3f3f3f")
+            words = (title or "").upper().split()
+            lines: list[str] = []
             line = ""
-            for word in (title or "").split():
-                if draw.textlength(line + " " + word, font=big) > 200 and line:
-                    draw.text((18, y), line, fill="#fafafa", font=big)
-                    y += 32
+            for word in words:
+                trial = (line + " " + word).strip()
+                if draw.textlength(trial, font=title_font) > 150 and line:
+                    lines.append(line)
                     line = word
                 else:
-                    line = (line + " " + word).strip()
-                if y > 260:
+                    line = trial
+                if len(lines) == 4:
                     break
-            if line and y <= 260:
-                draw.text((18, y), line, fill="#fafafa", font=big)
+            if line and len(lines) < 4:
+                lines.append(line)
+            cx = (spine[2] + book[2]) / 2
+            y = 140 - 11 * len(lines)
+            for text_line in lines:
+                spaced = " ".join(text_line)  # letterspacing
+                if draw.textlength(spaced, font=title_font) <= 170:
+                    text_line = spaced
+                draw.text((cx - draw.textlength(text_line, font=title_font) / 2, y), text_line, fill="#e3e3e3", font=title_font)
+                y += 24
+            author = ""
+            for word in (publisher or "").split(",")[0].upper().split():
+                trial = (author + " " + word).strip()
+                if draw.textlength(trial, font=small) > 160:
+                    break
+                author = trial
+            draw.text((cx - draw.textlength(author, font=small) / 2, y + 26), author, fill="#bdbdbd", font=small)
+            # spine text, rotated
+            spine_text = " ".join((title or "").upper().split())[:36]
+            strip = Image.new("RGBA", (book[3] - book[1] - 24, 14), (0, 0, 0, 0))
+            ImageDraw.Draw(strip).text((0, 1), spine_text, fill="#d0d0d0", font=spine_font)
+            img.paste(strip.rotate(90, expand=True), (spine[0] + 4, book[1] + 12), strip.rotate(90, expand=True))
             img.save(out)
     return out
 
