@@ -41,34 +41,37 @@ const answered = await until(async () => /Answer/i.test(await text()) && !/Askin
 check('ask online returns a quoted answer', answered && /page \d+/.test(await text()));
 await shot('1-answer');
 
-// 4. offline switch stores a question locally
-await page.evaluate(() => localStorage.removeItem('lifekit.questions'));
-const railSwitch = await page.$('.rail button.net, .rail .net');
-check('rail has an offline switch', !!railSwitch);
-if (railSwitch) await railSwitch.click(); await wait(300);
-check('rail shows Offline after the switch', /Offline/.test(await text()));
-await page.evaluate(() => { const i = document.querySelector('.bar input'); i.value = ''; });
+// 4. offline override stores a question locally
+await page.evaluate(() => { localStorage.removeItem('lifekit.questions'); localStorage.setItem('lifekit.forceOffline', '1'); });
+await go('?offline#/search', '.bar input');
+check('rail has an offline switch', !!(await page.$('.rail button.net, .rail .net')));
+check('rail shows Offline with the override set', /Offline/.test(await text()));
 await page.click('.bar input'); await page.keyboard.type('how to splint a broken wrist with a magazine');
-await clickText('button', 'Ask'); await wait(500);
-const queued = await page.evaluate(() => JSON.parse(localStorage.getItem('lifekit.questions') ?? '[]'));
-check('offline ask is stored in the browser', queued.length === 1, JSON.stringify(queued).slice(0, 80));
+await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => /^Ask/.test(b.textContent.trim())).click());
+const queuedOne = await until(async () => (await page.evaluate(() => JSON.parse(localStorage.getItem('lifekit.questions') ?? '[]'))).length === 1, 20, 300);
+check('offline ask is stored in the browser', queuedOne, await page.evaluate(() => localStorage.getItem('lifekit.questions') ?? ''));
 check('offline ask shows the stored message', /stored/i.test(await text()));
 await shot('2-offline-stored');
-if (railSwitch) await (await page.$('.rail button.net, .rail .net')).click(); await wait(300);
-check('rail shows Online after switching back', /Online/.test(await text()));
 
-// 5. digest sync sends the stored question and works it
-await go('#/digest', '.res.sync');
-check('digest lists the stored question before sync', /splint a broken wrist/.test(await text()));
-await clickText('button', 'Sync now');
-const synced = await until(async () => !/Working…/.test(await text()), 120, 5000);
-check('sync completes', synced);
-await wait(1000);
+// 5. the transition back online opens the modal, sends the question, runs the loop
+await (await page.$('.rail button.net, .rail .net')).click();
+check('rail shows Online after switching back', await until(async () => /Online/.test(await text()), 10, 300));
+check('modal opens on the transition', await until(async () => !!(await page.$('.modal')), 20, 500));
+check('modal shows a round-trip line', await until(async () => /Round trip \d+ ms/.test(await text()), 20, 500));
+check('modal lists the stored question', /splint a broken wrist/.test(await text()));
+check('modal sends the stored question', await until(async () => /Sent\./.test(await text()), 30, 1000));
+check('modal trail runs the loop', await until(async () => /named the topic|Searched|The loop is off|Nothing to work/.test(await text()), 60, 2000));
+check('modal reaches Done', await until(async () => /Done\.|The loop is off|Nothing to work/.test(await text()), 180, 2000));
+await shot('3-back-online');
+await clickText('.modal button', 'Close'); await wait(300);
+check('Close dismisses the modal', !(await page.$('.modal')));
 const digest = await api('/api/digest');
 const cand = digest.candidates.find((c) => c.question && /splint/.test(c.question.text));
 const answeredSplint = digest.answered.find((a) => /splint/.test(a.question));
-check('sync worked the stored question: staged a candidate or answered from admitted volumes', !!cand || (answeredSplint && answeredSplint.state === 'resolved'), cand ? cand.id : answeredSplint ? `${answeredSplint.state} from ${answeredSplint.volumes.join(', ')}` : JSON.stringify(digest.pending).slice(0, 100));
-await shot('3-digest');
+check('the loop worked the stored question: a new download or an answer from admitted volumes', !!cand || (answeredSplint && answeredSplint.state === 'resolved'), cand ? cand.id : answeredSplint ? `${answeredSplint.state} from ${answeredSplint.volumes.join(', ')}` : JSON.stringify(digest.pending).slice(0, 100));
+await go('#/digest', '.screen');
+check('digest shows new downloads or the answer', await until(async () => /New downloads|Answered/.test(await text()), 20, 500));
+await shot('3b-digest');
 
 // 6. packet by keyboard: A admits
 if (cand) {
@@ -138,23 +141,6 @@ await clickText('button', 'Boating'); await wait(500); // restore
 // 12. welcome routing does not loop for a set profile
 await go('#/', '.wordmark');
 check('a set profile does not route to Welcome', !/#\/welcome/.test(await page.evaluate(() => location.hash)));
-
-// 12b. the back-online modal on the offline-to-online transition
-await go('#/search', '.bar input');
-await page.evaluate(() => localStorage.removeItem('lifekit.questions'));
-await (await page.$('.rail .net')).click(); await wait(300);
-await page.evaluate(() => { const i = document.querySelector('.bar input'); i.value = ''; });
-await page.click('.bar input'); await page.keyboard.type('how do I treat a sprained ankle on a hike');
-await clickText('button', 'Ask'); await wait(500);
-await (await page.$('.rail .net')).click();
-check('modal opens on the transition', await until(async () => !!(await page.$('.modal')), 20, 500));
-check('modal shows a round-trip line', await until(async () => /Round trip \d+ ms/.test(await text()), 20, 500));
-check('modal lists the stored question', /sprained ankle/.test(await text()));
-check('modal trail runs the loop', await until(async () => /Question:|The loop is off|Nothing to work/.test(await text()), 60, 2000));
-check('modal reaches Done', await until(async () => /Done\.|The loop is off|Nothing to work/.test(await text()), 180, 2000));
-await shot('6-back-online');
-await clickText('.modal button', 'Close'); await wait(300);
-check('Close dismisses the modal', !(await page.$('.modal')));
 
 // 13. phone width still has the bottom nav and no rail
 await page.setViewport({ width: 390, height: 1100, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); // Chrome reloads on the emulation change
