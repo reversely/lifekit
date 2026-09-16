@@ -75,10 +75,13 @@ def _passages(db, question: str) -> tuple[list[dict], str]:
 def answer(db, question: str, history: list[dict] | None = None, profile: dict | None = None) -> dict:
     """One turn. history holds earlier turns as {role: user|assistant, text}."""
     asking = _looks_like_question(question)
-    sources, block = _passages(db, question) if asking else ([], "")
+    # A short follow-up ("and if that does not stop it?") carries its subject in the
+    # previous question, so retrieval, the coverage judgment, and the gap record read both.
+    focus = _with_context(question, history or [])
+    sources, block = _passages(db, focus) if asking else ([], "")
     # A separate tiny judgment decides coverage; the answer prompt then sees passages
     # only when they bear on the question, so an off-topic passage cannot be quoted.
-    covered = bool(sources) and _covers(question, block)
+    covered = bool(sources) and _covers(focus, block)
     if not covered:
         sources, block = [], ""
     messages = [{"role": "system", "content": CHAT_PROMPT}]
@@ -93,9 +96,9 @@ def answer(db, question: str, history: list[dict] | None = None, profile: dict |
         text = re.sub(r"\s*\[[^\]]{3,120}\]", "", text).strip()
     queued = None
     if asking and not covered:
-        topic, wanted = gap_record(lambda s, u: provider.ask(s, u), question) if provider.loop_enabled() else (None, None)
+        topic, wanted = gap_record(lambda s, u: provider.ask(s, u), focus) if provider.loop_enabled() else (None, None)
         if topic and topic != "none":
-            qid = store_question(db, question, profile, topic=topic, wanted=wanted)
+            qid = store_question(db, focus, profile, topic=topic, wanted=wanted)
             queued = {"id": qid, "topic": topic, "wanted": wanted}
     return {"text": text, "sources": sources if covered else [], "queued": queued, "model": provider.endpoint("answer").name}
 
@@ -106,6 +109,16 @@ def _covers(question: str, block: str) -> bool:
     except Exception:  # noqa: BLE001
         return False
     return said.startswith("yes")
+
+
+_FOLLOW_UP = re.compile(r"^\s*(and|but|what if|if|then|or|also|how about|what about|does|is|it|that|this)\b", re.I)
+
+
+def _with_context(question: str, history: list[dict]) -> str:
+    words = re.findall(r"[a-z]+", question.lower())
+    short = len(words) < 6 or _FOLLOW_UP.match(question) is not None
+    last_user = next((t.get("text", "") for t in reversed(history) if t.get("role") == "user"), "")
+    return f"{last_user} {question}".strip() if short and last_user else question
 
 
 def _looks_like_question(text: str) -> bool:
