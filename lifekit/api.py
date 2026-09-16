@@ -186,9 +186,32 @@ def api_db():
     return FileResponse(Path(DB_PATH), media_type="application/octet-stream", headers={"Cache-Control": "no-store"})
 
 
+WEB_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
+
+
+@app.get("/thumbs/{volume_id}.png")
+def api_thumb(volume_id: str):
+    """A thumbnail for every volume: the build's file when present, else one rendered
+    on demand (first PDF page, or a typographic tile for an HTML article)."""
+    from fastapi import HTTPException
+
+    from lifekit.library.render import thumbnail
+
+    built = WEB_DIST / "thumbs" / f"{volume_id}.png"
+    if built.exists():
+        return FileResponse(built, media_type="image/png")
+    row = db().execute("SELECT format, title, publisher FROM volume WHERE id = ?", (volume_id,)).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404)
+    try:
+        path = thumbnail(volume_id, row[0], row[1] or "", row[2] or "")
+    except Exception:  # noqa: BLE001  a missing source file: fall back to the tile
+        path = thumbnail(volume_id, "html", row[1] or "", row[2] or "")
+    return FileResponse(path, media_type="image/png")
+
+
 # The built web app, when present, so one process serves an instance. The SQLite
 # wasm needs cross-origin isolation, hence the two headers on every response.
-WEB_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
 if WEB_DIST.is_dir():
     from starlette.middleware.base import BaseHTTPMiddleware
     from starlette.staticfiles import StaticFiles

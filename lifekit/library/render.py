@@ -119,14 +119,17 @@ def render_timeline(out: Path, active: str | None = None, sort: str = "latest") 
 
 
 NAMESPACES = [("section", "SECTION"), ("type", "TYPE"), ("publisher", "PUBLISHER")]
-THUMBS = Path("docs/progress/thumbs")
+from lifekit.packs import LOCAL_PACKS
+
+THUMBS = LOCAL_PACKS / "thumbs"
+_FONT = Path(__file__).resolve().parents[2] / "web" / "public" / "fonts" / "Aeonik-Medium.ttf"
 
 
-def thumbnail(volume_id: str, fmt: str, title: str = "", publisher: str = "") -> str:
-    """Path of a small thumbnail, made once: the first page for a PDF, a typographic
-    tile (publisher and title) for an HTML page."""
-    THUMBS.mkdir(parents=True, exist_ok=True)
-    out = THUMBS / f"{volume_id}.png"
+def thumbnail(volume_id: str, fmt: str, title: str = "", publisher: str = "", out_dir: Path = THUMBS) -> Path:
+    """A small thumbnail, made once: the first page for a PDF, a typographic tile
+    (publisher and title) for an HTML page. Returns the file path."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / f"{volume_id}.png"
     if not out.exists():
         if fmt == "pdf":
             import pypdfium2 as pdfium
@@ -140,8 +143,9 @@ def thumbnail(volume_id: str, fmt: str, title: str = "", publisher: str = "") ->
             img = Image.new("RGB", (240, 330), "#18181b")
             draw = ImageDraw.Draw(img)
             try:
-                small = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 18)
-                big = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 26)
+                face = str(_FONT) if _FONT.exists() else "/System/Library/Fonts/Helvetica.ttc"
+                small = ImageFont.truetype(face, 18)
+                big = ImageFont.truetype(face, 26)
             except OSError:
                 small = big = ImageFont.load_default()
             draw.rectangle([0, 0, 239, 329], outline="#3f3f46")
@@ -160,7 +164,7 @@ def thumbnail(volume_id: str, fmt: str, title: str = "", publisher: str = "") ->
             if line and y <= 260:
                 draw.text((18, y), line, fill="#fafafa", font=big)
             img.save(out)
-    return f"thumbs/{volume_id}.png"
+    return out
 
 
 SORTS = [("latest", "Latest"), ("oldest", "Oldest"), ("title", "A to Z"), ("pages", "Pages")]
@@ -227,7 +231,8 @@ def render_search(out: Path, question: str, tag: str | None = None) -> None:
 
 
 def _card(vid, title, publisher, edition, pages, cover, fmt, tags_html="") -> str:
-    thumb = thumbnail(vid, fmt, title, publisher)
+    thumbnail(vid, fmt, title, publisher, out_dir=Path("docs/progress/thumbs"))
+    thumb = f"thumbs/{vid}.png"
     return (
         f'<div class="cover"><div class="head"><img class="thumb" src="{thumb}"><div>'
         f'<h2>{html.escape(title)}</h2>'
