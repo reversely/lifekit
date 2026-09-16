@@ -215,3 +215,30 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .res.trail .from { color: var(--muted); font-weight: 400; }
 .res.trail p { margin: 8px 0 4px 14px; }
 .res.trail .open { margin: 8px 8px 0 14px; }
+
+/* chat: transcript above a pinned input row (from the flux chat screen) */
+.screen.chat { display: flex; flex-direction: column; min-height: 100vh; padding-bottom: 0; }
+.chat-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.chat-links { display: flex; gap: 8px; padding-top: 50px; }
+.thread { flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 16px 24px 24px; overflow-y: auto; }
+.bubble { max-width: 85%; border-radius: 12px; padding: 14px 18px; font-size: 16px; line-height: 1.55; }
+.bubble.user { align-self: flex-end; background: var(--text); color: var(--ground); }
+.bubble.assistant { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); color: var(--text-2); }
+.bubble p { margin: 0; white-space: pre-wrap; }
+.bubble .lines { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.bubble .line { display: inline-block; font-size: 13px; color: var(--secondary); text-decoration: underline; margin-top: 6px; }
+.dots { display: inline-flex; gap: 5px; padding: 4px 0; }
+.dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite; }
+.dots i:nth-child(2) { animation-delay: 0.2s; } .dots i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+.input-area { position: sticky; bottom: 0; padding: 12px 24px 84px; background: linear-gradient(transparent, var(--ground) 30%); }
+.input-row { display: flex; gap: 8px; align-items: center; }
+.input-row input { flex: 1; height: 48px; border-radius: 24px; padding: 0 18px; background: var(--surface); border: 1px solid var(--border-strong); color: var(--text); font: inherit; outline: none; }
+.input-row .send { width: 48px; height: 48px; border-radius: 24px; background: var(--text); color: var(--ground); font-size: 20px; font-weight: 700; }
+.input-row .send:disabled { opacity: 0.35; cursor: default; }
+.chat-rows { display: flex; flex-direction: column; gap: 8px; padding: 8px 24px; }
+.chat-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); }
+.chat-row .t { font-size: 16px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
+.chat-row .s { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.chat-row .chev { color: var(--muted); font-size: 20px; }
+@media (min-width: 900px) { .input-area { padding-bottom: 28px; } .screen.chat { min-height: 100vh; } .bubble { max-width: 70%; } }

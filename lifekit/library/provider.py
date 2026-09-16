@@ -59,8 +59,12 @@ def loop_enabled() -> bool:
 
 def ask(system: str, user: str, max_tokens: int = 300, kind: str = "small") -> str:
     """One chat completion: a system instruction and a user turn, low temperature."""
+    return chat([{"role": "system", "content": system}, {"role": "user", "content": user}], max_tokens=max_tokens, kind=kind)
+
+
+def chat(messages: list[dict], max_tokens: int = 300, kind: str = "small") -> str:
+    """A chat completion over a full message list (system, then alternating turns)."""
     target = endpoint(kind)
-    messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
     if target.scheme == "openai":
         import httpx
 

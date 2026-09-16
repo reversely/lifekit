@@ -8,6 +8,7 @@ Endpoints
   GET  /api/config                     model endpoints and whether the loop runs
   GET  /api/search?q=&tag=            passages and matching volumes from the library
   POST /api/answer  {question, tag}   model answer that quotes passages, or a stored question
+  POST /api/chat    {question, history}  a conversation turn in the library's voice, with sources
   POST /api/questions {text}          store a question (the client is offline, or nothing answered)
   POST /api/sync                       work stored questions: name, find, pull, re-ask
   GET  /api/sync/stream                the same pass, one JSON record per step as it happens
@@ -27,7 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from lifekit.library import loop, profile as profiles, provider, verdicts
+from lifekit.library import chat as chats, loop, profile as profiles, provider, verdicts
 from lifekit.library.build import DB_PATH, connect
 from lifekit.library.query import search, volumes_matching
 
@@ -77,6 +78,16 @@ class Answers(BaseModel):
     activities: list[str] | None = None
     household: list[str] | None = None
     trips: list[str] | None = None
+
+
+class ChatTurn(BaseModel):
+    role: str
+    text: str
+
+
+class ChatRequest(BaseModel):
+    question: str
+    history: list[ChatTurn] = []
 
 
 class Verdict(BaseModel):
@@ -131,6 +142,12 @@ def api_sync():
     events: list[str] = []
     digest = loop.work(connection, _ask, _answer, covers=_cover, log=events.append)
     return {"digest": digest, "events": events, "pending": loop.pending(connection)}
+
+
+@app.post("/api/chat")
+def api_chat(body: ChatRequest):
+    connection = db()
+    return chats.answer(connection, body.question, [t.model_dump() for t in body.history], profiles.get(connection))
 
 
 @app.get("/api/profile")

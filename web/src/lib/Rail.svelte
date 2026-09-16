@@ -37,6 +37,7 @@
 <aside class="rail" aria-label="Sections and screens">
   <a class="brand" href="#/">LifeKit</a>
   <nav class="screens">
+    <a href="#/chat" class:on={screen === 'chat' || screen === 'chats'}>Chat</a>
     <a href="#/" class:on={screen === ''}>Library</a>
     <a href="#/recent" class:on={screen === 'recent'}>Recent</a>
     <a href="#/search" class:on={screen === 'search'}>Search</a>

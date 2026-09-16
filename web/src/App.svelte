@@ -12,6 +12,8 @@
   import Volume from './lib/screens/Volume.svelte';
   import Digest from './lib/screens/Digest.svelte';
   import Demo from './lib/screens/Demo.svelte';
+  import Chat from './lib/screens/Chat.svelte';
+  import Chats from './lib/screens/Chats.svelte';
   import Rail from './lib/Rail.svelte';
   import { forceOffline, online } from './lib/core/net';
   import { queued } from './lib/core/api';
@@ -60,6 +62,10 @@
   <Search {db} initial={params.get('q') ?? ''} />
 {:else if screen === 'digest'}
   <Digest />
+{:else if screen === 'chat'}
+  <Chat id={parts[1] ?? null} ask={params.get('ask')} />
+{:else if screen === 'chats'}
+  <Chats />
 {:else if screen === 'demo'}
   <Demo {db} step={Number(parts[1] ?? 1)} />
 {:else if screen === 'welcome'}
@@ -74,6 +80,7 @@
 </main>
 
 <nav class="nav" class:paper={screen === ''}>
+  <a href="#/chat" class:on={screen === 'chat' || screen === 'chats'}>Chat</a>
   <a href="#/" class:on={screen === ''}>Library</a>
   <a href="#/recent" class:on={screen === 'recent'}>Recent</a>
   <a href="#/search" class:on={screen === 'search'}>Search</a>
