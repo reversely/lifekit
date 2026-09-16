@@ -70,7 +70,7 @@ const cand = digest.candidates.find((c) => c.question && /splint/.test(c.questio
 const answeredSplint = digest.answered.find((a) => /splint/.test(a.question));
 check('the loop worked the stored question: a new download or an answer from admitted volumes', !!cand || (answeredSplint && answeredSplint.state === 'resolved'), cand ? cand.id : answeredSplint ? `${answeredSplint.state} from ${answeredSplint.volumes.join(', ')}` : JSON.stringify(digest.pending).slice(0, 100));
 await go('#/digest', '.screen');
-check('digest shows new downloads or the answer', await until(async () => /New downloads|Answered/.test(await text()), 20, 500));
+check('digest shows new downloads or the answer', await until(async () => /New downloads|Answered/i.test(await text()), 20, 500));
 await shot('3b-digest');
 
 // 6. packet by keyboard: A admits
