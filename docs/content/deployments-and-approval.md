@@ -107,15 +107,15 @@ One screen per candidate, reached from the digest and from the marker on the car
 | The document | `volume` title, publisher, licence sentence, retrieved date, cover text |
 | The filing | the `section:` tag the loop chose, with the twelve sections as options |
 | The answer it gives | the re-ask's answer and the quoted passage with its page link |
-| Verdict | Admit, Refile, Reject, under the sentence "Admit, refile, or reject this document." |
+| Verdict | "Add to library" and "Remove", under the sentence "Add this document to the library, or remove it." A changed section plus Add is the refile. |
 
 ### 3.3 Verdicts
 
-- Admit sets `admission = admitted` and removes the marker.
-- Refile writes the new section to the volume's hand tag file, which already survives
+- Add to library (admit) sets `admission = admitted` and removes the marker.
+- Add to library with a changed section (refile) writes the new section to the volume's hand tag file, which already survives
   rebuilds, then admits. Each refile also appends one line to a per-instance examples file
   that the section prompt reads, so the loop's filing improves from the owner's corrections.
-- Reject sets `admission = rejected`, removes the volume from search, and records the
+- Remove (reject) sets `admission = rejected`, removes the volume from search, and records the
   volume id in the shelf's `rejected.tsv` so a later pull of the same document is skipped.
   Rejection covers the one document. A rule against a publisher for a topic, or against a
   publisher outright, joins later if a rejection repeats.
