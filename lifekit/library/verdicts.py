@@ -46,7 +46,7 @@ def filing_examples(limit: int = 12) -> list[tuple[str, str]]:
     return [(r["question"], r["section"]) for r in rows[-limit:]][::-1]
 
 
-def apply(db, volume_id: str, verdict: str, section: str | None = None, by: str = "owner") -> dict:
+def apply(db, volume_id: str, verdict: str, section: str | None = None, by: str = "reader") -> dict:
     """Apply one verdict and return the volume's new state."""
     if verdict not in ("admit", "refile", "reject"):
         raise ValueError(f"unknown verdict {verdict!r}")
@@ -72,7 +72,7 @@ def apply(db, volume_id: str, verdict: str, section: str | None = None, by: str 
         question = db.execute(
             "SELECT q.text FROM question q JOIN provenance p ON p.entity_id = ? AND p.activity = 'pull'"
             " WHERE p.derived_from LIKE '%' || q.id || '%' LIMIT 1", (volume_id,)).fetchone()
-        if question:
+        if question and by == "reader":
             _record_example(question[0], section)
     db.execute("UPDATE volume SET admission = ?, admitted_at = ?, admitted_by = ? WHERE id = ?",
                (admission, at, by, volume_id))

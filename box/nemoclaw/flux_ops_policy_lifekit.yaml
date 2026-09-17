@@ -1,0 +1,8 @@
+# NemoClaw sandbox policy for a LifeKit box: local service ports only, no internet origins.
+# Apply with the blueprint's policy tool; the balanced-tier internet presets stay off.
+name: lifekit-ops
+allow:
+  hosts:
+    - host.openshell.internal:8008    # the LifeKit API and web app
+    - host.openshell.internal:11434   # Ollama, the model endpoint
+deny_all_other_egress: true

@@ -10,6 +10,8 @@
 #   LIFEKIT_MODEL_ANSWER  same as small unless set
 #   LIFEKIT_ONLINE_RETRIEVAL          on
 #   LIFEKIT_PORT          8008
+#   LIFEKIT_ZIM           on to download the 49 GB offline Wikipedia archive into packs/zim/
+#   LIFEKIT_TOKEN         the box token that browsers and drives send with requests that change state
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -37,6 +39,20 @@ if [ ! -s packs/library.sqlite ]; then
   uv run python -m lifekit.library.build
 else
   echo "packs/library.sqlite present ($(du -h packs/library.sqlite | cut -f1))"
+fi
+
+step "offline Wikipedia archive"
+ZIM_NAME="wikipedia_en_all_nopic_2026-06.zim"
+ZIM_URL="https://download.kiwix.org/zim/wikipedia/$ZIM_NAME"
+if ls packs/zim/*.zim >/dev/null 2>&1; then
+  echo "present: $(ls packs/zim/*.zim | head -1)"
+elif [ "${LIFEKIT_ZIM:-off}" = "on" ]; then
+  echo "downloading $ZIM_NAME (49 GB) from $ZIM_URL into packs/zim/"
+  mkdir -p packs/zim
+  curl -sS -L -C - -o "packs/zim/$ZIM_NAME.part" "$ZIM_URL" && mv "packs/zim/$ZIM_NAME.part" "packs/zim/$ZIM_NAME"
+  if command -v sha256sum >/dev/null; then sha256sum "packs/zim/$ZIM_NAME" | tee packs/zim/$ZIM_NAME.sha256; fi
+else
+  echo "absent: no archive under packs/zim; online retrieval searches live Wikipedia. Set LIFEKIT_ZIM=on to download $ZIM_NAME (49 GB)."
 fi
 
 step "web build"

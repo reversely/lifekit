@@ -15,6 +15,11 @@ Environment=PATH=/home/springbuilt/.local/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/bin/bash scripts/box_up.sh
 Restart=always
 RestartSec=5
+# Limits: the API and the retrieval program need under 4 GB; the model runs in Ollama.
+MemoryMax=6G
+LimitNOFILE=4096
+PrivateTmp=yes
+NoNewPrivileges=yes
 
 [Install]
 WantedBy=multi-user.target

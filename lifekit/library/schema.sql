@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS volume (
     superseded_by TEXT,
     -- docs/content/deployments-and-approval.md 3.1: stock from a shelf list; staged by the
     -- online retrieval, not yet added or removed; admitted; rejected (hidden from search).
+    source_rule TEXT,
     admission TEXT NOT NULL DEFAULT 'stock' CHECK (admission IN ('stock', 'staged', 'admitted', 'rejected')),
     admitted_at TEXT,
     admitted_by TEXT
@@ -126,4 +127,13 @@ CREATE TABLE IF NOT EXISTS digest (
     answer TEXT,
     volumes TEXT,
     at TEXT
+);
+
+-- One record per step of online retrieval, whoever started the run.
+CREATE TABLE IF NOT EXISTS retrieval_event (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    question_id TEXT,
+    step TEXT NOT NULL,
+    at TEXT NOT NULL,
+    data TEXT
 );

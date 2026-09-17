@@ -11,7 +11,8 @@ Endpoints
   POST /api/chat    {question, history}  a conversation turn in the library's voice, with sources
   POST /api/questions {text}          store a question (the client is offline, or nothing answered)
   POST /api/sync                       work stored questions: name, find, pull, re-ask
-  GET  /api/sync/stream                the same pass, one JSON record per step as it happens
+  GET  /api/sync/stream                the same run, one JSON record per step as it happens
+  GET  /api/events?since=              the event log of every run, for the screens
   GET  /api/digest                     what arrived and what got answered, newest first
   GET  /api/library.sqlite             the current database, for the app to (re)load
   GET  /api/profile                    the household profile and the onboarding questions
@@ -21,9 +22,11 @@ Endpoints
 """
 
 import json
+import os
+import threading
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -35,6 +38,28 @@ from lifekit.library.query import search, volumes_matching
 
 app = FastAPI(title="LifeKit API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+TOKEN = os.environ.get("LIFEKIT_TOKEN", "")
+# Routes that change state or read private data need the box token when one is set.
+GUARDED = {("POST", "/api/verdict"), ("PUT", "/api/profile"), ("POST", "/api/questions"), ("POST", "/api/sync"),
+           ("GET", "/api/sync/stream"), ("GET", "/api/library.sqlite"), ("GET", "/library.sqlite"), ("GET", "/api/profile"),
+           ("POST", "/api/chat"), ("POST", "/api/answer"), ("GET", "/api/digest"), ("GET", "/api/candidates"), ("GET", "/api/events")}
+
+
+@app.middleware("http")
+async def require_token(request, call_next):
+    if TOKEN and (request.method, request.url.path) in GUARDED:
+        given = request.headers.get("x-lifekit-token") or request.query_params.get("token", "")
+        if given != TOKEN:
+            from fastapi.responses import JSONResponse
+
+            return JSONResponse({"error": "token required"}, status_code=401)
+    return await call_next(request)
+
+
+def test_run(request) -> bool:
+    """A verification drive marks its requests so nothing it does is recorded as a reader's choice."""
+    return request.headers.get("x-lifekit-test") == "1"
 
 
 def db():
@@ -138,7 +163,14 @@ def api_answer(body: Question):
 
 @app.post("/api/questions")
 def api_store(body: Stored):
-    return {"stored": online_retrieval.store_question(db(), body.text)}
+    """A question the browser held while it was offline. Nemotron on the box writes the
+    missing-document record now, so the queue holds the topic and the kind of document
+    wanted before any retrieval runs."""
+    connection = db()
+    topic, wanted = online_retrieval.gap_record(_ask, body.text) if provider.online_retrieval_enabled() else (None, None)
+    qid = online_retrieval.store_question(connection, body.text, profiles.get(connection), topic=topic, wanted=wanted)
+    wake_retrieval()
+    return {"stored": qid, "topic": topic, "wanted": wanted}
 
 
 @app.post("/api/sync")
@@ -154,7 +186,10 @@ def api_sync():
 @app.post("/api/chat")
 def api_chat(body: ChatRequest):
     connection = db()
-    return chats.answer(connection, body.question, [t.model_dump() for t in body.history], profiles.get(connection))
+    reply = chats.answer(connection, body.question, [t.model_dump() for t in body.history], profiles.get(connection))
+    if reply.get("queued"):
+        wake_retrieval()
+    return reply
 
 
 @app.get("/api/profile")
@@ -178,9 +213,13 @@ def api_candidates():
 
 
 @app.post("/api/verdict")
-def api_verdict(body: Verdict):
+def api_verdict(body: Verdict, request: Request):
+    if not online_retrieval.valid_id(body.volume):
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=400, detail="invalid volume id")
     try:
-        return verdicts.apply(db(), body.volume, body.verdict, body.section)
+        return verdicts.apply(db(), body.volume, body.verdict, body.section, by="test" if test_run(request) else "reader")
     except (ValueError, KeyError) as error:
         return {"error": str(error)}
 
@@ -219,6 +258,49 @@ def api_sync_stream():
         yield json.dumps({"done": True, "digest": result.get("digest", []), "error": result.get("error"), "pending": online_retrieval.pending(db())}) + "\n"
 
     return StreamingResponse(generate(), media_type="application/x-ndjson", headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
+
+
+@app.get("/api/events")
+def api_events(since: int = 0):
+    """The event log of online retrieval: one record per step, however the run started."""
+    return {"events": online_retrieval.events(db(), since=since)}
+
+
+# Online retrieval on the box, started by the queue (#26): a thread waits for a wake
+# signal, sent when a question is stored, and also wakes every minute while the queue
+# holds questions, so a question queued during an internet outage runs once the internet
+# returns. Nothing in a browser is needed.
+_wake = threading.Event()
+_worker_started = False
+
+
+def wake_retrieval() -> None:
+    _wake.set()
+
+
+def _retrieval_worker() -> None:
+    from lifekit.library.chat import internet_reachable
+
+    while True:
+        _wake.wait(timeout=60)
+        _wake.clear()
+        try:
+            connection = db()
+            if not provider.online_retrieval_enabled() or not online_retrieval.pending(connection):
+                continue
+            if not internet_reachable():
+                continue
+            online_retrieval.retrieve_for_queue(connection, _ask, _answer, covers=_cover, log=lambda _: None)
+        except Exception as error:  # noqa: BLE001
+            print(f"retrieval worker: {error}")
+
+
+@app.on_event("startup")
+def start_worker() -> None:
+    global _worker_started
+    if os.environ.get("LIFEKIT_QUEUE_WORKER", "on") != "off" and not _worker_started:
+        threading.Thread(target=_retrieval_worker, daemon=True, name="online-retrieval").start()
+        _worker_started = True
 
 
 @app.get("/api/digest")
