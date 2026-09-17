@@ -4,6 +4,7 @@ import puppeteer from 'puppeteer-core';
 const BASE = process.env.BASE ?? 'http://localhost:4173';
 const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
 const page = await browser.newPage();
+await page.evaluateOnNewDocument((tok) => { try { if (tok) localStorage.setItem('lifekit.token', tok); localStorage.setItem('lifekit.test', '1'); } catch {} }, process.env.TOKEN ?? '');
 await page.setViewport({ width: 390, height: 1100, deviceScaleFactor: 1, isMobile: true });
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e).slice(0, 160)));

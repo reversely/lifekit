@@ -2,6 +2,7 @@
 // which carries FTS5, so the browser runs the same search as the Python side.
 
 import sqlite3InitModule, { type Database, type SqlValue } from '@sqlite.org/sqlite-wasm';
+import { headers } from './api';
 
 export type { Database, SqlValue };
 
@@ -19,7 +20,7 @@ export function database(): Promise<Database> {
   if (!ready) {
     ready = (async () => {
       const sqlite3 = await sqlite3InitModule();
-      const bytes = new Uint8Array(await (await fetch(`/library.sqlite?v=${generation}`, { cache: 'no-store' })).arrayBuffer());
+      const bytes = new Uint8Array(await (await fetch(`/library.sqlite?v=${generation}`, { cache: 'no-store', headers: headers() })).arrayBuffer());
       const pointer = sqlite3.wasm.allocFromTypedArray(bytes);
       const db = new sqlite3.oo1.DB();
       const rc = sqlite3.capi.sqlite3_deserialize(

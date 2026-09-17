@@ -3,7 +3,7 @@
 // then the answer fills it. Offline, the question is stored for the online retrieval instead.
 
 import { writable, get } from 'svelte/store';
-import { enqueue } from './api';
+import { api, enqueue } from './api';
 
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '';
 const KEY = 'lifekit.chats';
@@ -90,7 +90,7 @@ export async function send(question: string, online: boolean): Promise<void> {
   const thread = get(threads).find((t) => t.id === threadId)!;
   const history = thread.messages.filter((m) => !m.pending && m.id !== pendingId).slice(-9, -1).map((m) => ({ role: m.role, text: m.text }));
   try {
-    const r = await fetch(`${BASE}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: trimmed, history }) });
+    const r = await api('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: trimmed, history }) });
     if (!r.ok) throw new Error(`chat: ${r.status}`);
     const a = await r.json();
     fill({ text: a.text, sources: a.sources, queued: a.queued });

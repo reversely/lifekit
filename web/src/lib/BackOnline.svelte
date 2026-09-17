@@ -5,7 +5,7 @@
   import { onMount } from 'svelte';
   import type { Database } from './core/db';
   import { reload } from './core/db';
-  import { config as fetchConfig, flush, queued, syncStream, type RetrievalEvent } from './core/api';
+  import { config as fetchConfig, events as fetchEvents, flush, queued, type RetrievalEvent } from './core/api';
   import { online } from './core/net';
   import RetrievalSteps from './RetrievalSteps.svelte';
   export let db: Database | null = null;
@@ -73,7 +73,16 @@
     }
     retrievalState = 'running';
     try {
-      await syncStream((e) => (events = [...events, e]));
+      // The box runs online retrieval itself once the queue is sent; the modal shows the
+      // event log as it grows and stops when no step arrives for twenty seconds.
+      let sinceId = (await fetchEvents(0)).slice(-1)[0]?.id ?? 0;
+      let quiet = 0;
+      while (quiet < 20) {
+        await new Promise((r) => setTimeout(r, 1000));
+        const fresh = await fetchEvents(sinceId);
+        if (fresh.length) { events = [...events, ...fresh]; sinceId = fresh[fresh.length - 1].id ?? sinceId; quiet = 0; }
+        else quiet += 1;
+      }
       await reload();
       dispatchEvent(new CustomEvent('lifekit:reload'));
     } catch {

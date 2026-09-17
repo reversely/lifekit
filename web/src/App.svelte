@@ -19,11 +19,15 @@
   import Chats from './lib/screens/Chats.svelte';
   import Rail from './lib/Rail.svelte';
   import TopBar from './lib/TopBar.svelte';
-  import Backdrop from './lib/Backdrop.svelte';
+  import SceneHost from './lib/SceneHost.svelte';
+  import { sections } from './lib/core/sections';
   import BackOnline from './lib/BackOnline.svelte';
   import { theme } from './lib/core/theme';
 
   let db: Database | null = null;
+  let askToken = false;
+  let tokenDraft = '';
+  function saveToken() { try { localStorage.setItem('lifekit.token', tokenDraft.trim()); } catch {} askToken = false; location.reload(); }
   let route = location.hash.replace(/^#/, '') || '/';
 
   onMount(async () => {
@@ -31,6 +35,7 @@
     addEventListener('hashchange', () => (route = location.hash.replace(/^#/, '') || '/'));
     addEventListener('lifekit:reload', async () => (db = await reload()));
     addEventListener('lifekit:changed', () => (db = db)); // same copy, changed in place
+    addEventListener('lifekit:token', () => (askToken = true));
     // first start: the profile is unset and nobody has skipped the welcome
     let dismissed = false;
     try {
@@ -61,11 +66,26 @@
     screen === 'section' ? (db ? sectionTitle(db, parts[1] ?? '') : 'Section')
     : screen === 'volume' ? (db && volume(db, parts[1] ?? '')?.title) || 'Volume'
     : TITLES[screen] ?? '';
+  // The section whose accent tints the scene: the section page, or a volume's section.
+  $: sceneAccent = (() => {
+    if (!db) return null;
+    let id: string | null = null;
+    if (screen === 'section') id = parts[1] ?? null;
+    else if (screen === 'volume') id = volume(db, parts[1] ?? '')?.tags.find((t) => t.namespace === 'section')?.value ?? null;
+    return id ? (sections(db).find((s) => s.id === id)?.accent ?? null) : null;
+  })();
   $: action = screen === 'chat' ? { icon: 'clock', label: 'Chats', href: '#/chats' } : screen === 'digest' ? null : { icon: 'activity', label: 'Digest', href: '#/digest' };
 </script>
 
-{#key isHome + $theme}<Backdrop animated={isHome} light={$theme === 'light'} />{/key}
+<SceneHost animated={isHome} light={$theme === 'light'} accent={sceneAccent} />
 <BackOnline {db} />
+{#if askToken}
+  <div class="modal-backdrop"><div class="modal token" role="dialog" aria-modal="true">
+    <h2>Box token</h2>
+    <p>This box requires a token for requests that change the library. Enter the token from the box setup.</p>
+    <div class="input-row"><input bind:value={tokenDraft} aria-label="Box token" on:keydown={(e) => e.key === 'Enter' && saveToken()} /><button class="chip ask" on:click={saveToken}>Save</button></div>
+  </div></div>
+{/if}
 {#if db && !isHome}
   <Rail {db} {screen} sectionId={parts[1] ?? null} />
 {/if}

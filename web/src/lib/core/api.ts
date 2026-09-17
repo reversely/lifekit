@@ -3,6 +3,27 @@
 // this module is only used when navigator.onLine says the network is there.
 
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '';
+
+/** The box token (localStorage lifekit.token) rides every request; a test run also marks
+ *  its requests (lifekit.test) so the API records nothing it does as a reader's choice. */
+export function headers(extra: Record<string, string> = {}): Record<string, string> {
+  const h: Record<string, string> = { ...extra };
+  try {
+    const token = localStorage.getItem('lifekit.token');
+    if (token) h['X-LifeKit-Token'] = token;
+    if (localStorage.getItem('lifekit.test') === '1') h['X-LifeKit-Test'] = '1';
+  } catch {
+    /* storage unavailable */
+  }
+  return h;
+}
+
+/** fetch with the headers above; a 401 tells the app to ask for the token. */
+export async function api(path: string, init: RequestInit = {}): Promise<Response> {
+  const r = await fetch(`${BASE}${path}`, { ...init, headers: { ...headers(), ...(init.headers as Record<string, string> | undefined) } });
+  if (r.status === 401) dispatchEvent(new CustomEvent('lifekit:token'));
+  return r;
+}
 const QUEUE_KEY = 'lifekit.questions';
 
 export interface AnswerResult {
@@ -81,22 +102,22 @@ export interface Config {
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const r = await fetch(`${BASE}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const r = await api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (!r.ok) throw new Error(`${path}: ${r.status}`);
   return r.json();
 }
 
 export const answer = (question: string, tag?: string | null) => post<AnswerResult>('/api/answer', { question, tag: tag ?? null });
 export const sync = () => post<{ digest: unknown[]; events: string[]; pending: unknown[] }>('/api/sync', {});
-export const digest = async (): Promise<Digest> => (await fetch(`${BASE}/api/digest`)).json();
-export const config = async (): Promise<Config> => (await fetch(`${BASE}/api/config`)).json();
-export const profile = async (): Promise<Profile> => (await fetch(`${BASE}/api/profile`)).json();
-export const candidates = async (): Promise<{ candidates: Candidate[] }> => (await fetch(`${BASE}/api/candidates`)).json();
+export const digest = async (): Promise<Digest> => (await api('/api/digest')).json();
+export const config = async (): Promise<Config> => (await api('/api/config')).json();
+export const profile = async (): Promise<Profile> => (await api('/api/profile')).json();
+export const candidates = async (): Promise<{ candidates: Candidate[] }> => (await api('/api/candidates')).json();
 export const verdict = (volume: string, verdict: 'admit' | 'refile' | 'reject', section?: string | null) =>
   post<{ admission?: string; error?: string }>('/api/verdict', { volume, verdict, section: section ?? null });
 
 export async function saveProfile(answers: Partial<Omit<ProfileAnswers, 'updated_at'>>): Promise<Profile> {
-  const r = await fetch(`${BASE}/api/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(answers) });
+  const r = await api('/api/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(answers) });
   if (!r.ok) throw new Error(`/api/profile: ${r.status}`);
   return r.json();
 }
@@ -132,6 +153,7 @@ export async function flush(): Promise<number> {
 
 /** One record per online retrieval step, as the server emits it. */
 export interface RetrievalEvent {
+  id?: number;
   question: string;
   step: string;
   at: string;
@@ -154,7 +176,7 @@ export interface RetrievalEvent {
 
 /** Run the online retrieval and receive each step as it happens. Resolves when the pass ends. */
 export async function syncStream(onEvent: (e: RetrievalEvent) => void): Promise<RetrievalEvent | null> {
-  const r = await fetch(`${BASE}/api/sync/stream`, { cache: 'no-store' });
+  const r = await api('/api/sync/stream', { cache: 'no-store' });
   if (!r.ok || !r.body) throw new Error(`sync: ${r.status}`);
   const reader = r.body.getReader();
   const decoder = new TextDecoder();
@@ -175,4 +197,11 @@ export async function syncStream(onEvent: (e: RetrievalEvent) => void): Promise<
     }
   }
   return last;
+}
+
+/** The event log: every step of online retrieval, however the run started, after `since`. */
+export async function events(since = 0): Promise<RetrievalEvent[]> {
+  const r = await api(`/api/events?since=${since}`, { cache: 'no-store' });
+  if (!r.ok) return [];
+  return (await r.json()).events as RetrievalEvent[];
 }

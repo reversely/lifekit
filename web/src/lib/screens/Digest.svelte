@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { config as fetchConfig, digest as fetchDigest, flush, queued, syncStream, verdict as sendVerdict, type Config, type Digest, type RetrievalEvent } from '../core/api';
+  import { onDestroy, onMount } from 'svelte';
+  import { config as fetchConfig, digest as fetchDigest, events as fetchEvents, flush, queued, verdict as sendVerdict, type Config, type Digest, type RetrievalEvent } from '../core/api';
   import { applyVerdict } from '../core/db';
   import { sectionTitle } from '../core/sections';
   import RetrievalSteps from '../RetrievalSteps.svelte';
@@ -29,18 +29,34 @@
     }
   }
 
+  // The event log holds every step of online retrieval, however the run started; the
+  // screen reads it on open and every five seconds while questions wait.
+  let lastId = 0;
+  let poll: ReturnType<typeof setInterval> | null = null;
+  async function readEvents() {
+    try {
+      const fresh = await fetchEvents(lastId);
+      if (fresh.length) {
+        events = [...events, ...fresh].slice(-400);
+        lastId = fresh[fresh.length - 1].id ?? lastId;
+        await load();
+        dispatchEvent(new CustomEvent('lifekit:reload'));
+      }
+    } catch {
+      /* the API is unreachable; the next poll tries again */
+    }
+  }
   async function runSync() {
     working = true;
     status = '';
-    events = [];
     try {
       const n = await flush();
       status = n ? `${n} question${n === 1 ? '' : 's'} sent.` : '';
-      const last = await syncStream((e) => (events = [...events, e]));
-      if (last?.note) status = last.note;
-      else if (!events.some((e) => !e.done)) status = 'Nothing to work.';
+      await readEvents();
+      const r = await fetch('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-LifeKit-Token': localStorage.getItem('lifekit.token') ?? '' }, body: '{}' });
+      if (!r.ok) status = `Send failed: ${r.status}`;
+      await readEvents();
       await load();
-      dispatchEvent(new CustomEvent('lifekit:reload'));
     } catch (e) {
       status = `Send failed: ${String(e)}`;
     }
@@ -63,7 +79,14 @@
     }
   }
 
-  onMount(load);
+  onMount(async () => {
+    await load();
+    const initial = await fetchEvents(0);
+    events = initial.slice(-200);
+    lastId = initial.length ? (initial[initial.length - 1].id ?? 0) : 0;
+    poll = setInterval(readEvents, 5000);
+  });
+  onDestroy(() => { if (poll) clearInterval(poll); });
 </script>
 
 <div class="screen">

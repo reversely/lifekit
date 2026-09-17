@@ -7,6 +7,7 @@ const routes = [['home', '#/'], ['library', '#/library'], ['recent', '#/recent']
 const errors = [];
 for (const [vn, vp] of Object.entries(V)) for (const [name, route] of routes) {
   const page = await browser.newPage();
+await page.evaluateOnNewDocument((tok) => { try { if (tok) localStorage.setItem('lifekit.token', tok); localStorage.setItem('lifekit.test', '1'); } catch {} }, process.env.TOKEN ?? '');
   page.on('pageerror', (e) => errors.push(`${vn}/${name}: ${String(e).slice(0, 160)}`));
   await page.setViewport(vp);
   try { localStorage.setItem('lifekit.welcomeDone', '1'); } catch {}

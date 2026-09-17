@@ -8,6 +8,7 @@ const BASE = process.env.BASE ?? 'http://localhost:4173';
 const [outDir, stamp] = process.argv.slice(2);
 const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
 const page = await browser.newPage();
+await page.evaluateOnNewDocument((tok) => { try { if (tok) localStorage.setItem('lifekit.token', tok); localStorage.setItem('lifekit.test', '1'); } catch {} }, process.env.TOKEN ?? '');
 await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e).slice(0, 160)));
@@ -19,7 +20,7 @@ const text = () => page.evaluate(() => document.body.innerText);
 const go = async (hash, sel = 'body') => { await page.goto(`${BASE}/${hash}`, { waitUntil: 'networkidle0' }); await page.waitForSelector(sel, { timeout: 90000 }); await wait(400); };
 const clickText = async (sel, t) => page.evaluate((sel, t) => { const el = [...document.querySelectorAll(sel)].find((e) => e.textContent.trim() === t); if (el) { el.click(); return true; } return false; }, sel, t);
 const shot = async (n) => { if (outDir) await page.screenshot({ path: `${outDir}/${stamp}_${n}.png` }); };
-const api = async (path, init) => (await fetch(`${BASE}${path}`, init)).json();
+const api = async (path, init = {}) => (await fetch(`${BASE}${path}`, { ...init, headers: { ...(init.headers ?? {}), 'X-LifeKit-Token': process.env.TOKEN ?? '', 'X-LifeKit-Test': '1' } })).json();
 const until = async (fn, tries = 120, ms = 5000) => { for (let i = 0; i < tries; i++) { if (await fn()) return true; await wait(ms); } return false; };
 
 // 1. local search over the SQLite in the browser
