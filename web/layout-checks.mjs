@@ -47,7 +47,6 @@ for (const theme of ['dark', 'light']) {
   for (const width of WIDTHS) {
     const page = await browser.newPage();
     await page.evaluateOnNewDocument((tok) => { try { if (tok) localStorage.setItem('lifekit.token', tok); localStorage.setItem('lifekit.test', '1'); } catch {} }, process.env.TOKEN ?? '');
-await page.evaluateOnNewDocument((tok) => { try { if (tok) localStorage.setItem('lifekit.token', tok); localStorage.setItem('lifekit.test', '1'); } catch {} }, process.env.TOKEN ?? '');
     await page.evaluateOnNewDocument((th) => { try { localStorage.setItem('lifekit.theme', th); localStorage.setItem('lifekit.welcomeDone', '1'); } catch {} }, theme);
     await page.setViewport({ width, height: 900, deviceScaleFactor: 1, isMobile: width < 900, hasTouch: width < 900 });
     for (const [name, route] of ROUTES) {

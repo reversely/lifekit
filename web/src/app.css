@@ -344,3 +344,4 @@ button.icon-only, .topbar .net, .rail .net, .mode, .bar .x { min-width: 36px; mi
 
 /* inline switches and attribution links keep a 28 px touch height on phones */
 .sub .net, .askrow .net, .attribution a { display: inline-flex; align-items: center; min-height: 28px; }
+.res.trail .step .inline, .res .src a { display: inline-flex; align-items: center; min-height: 28px; }
