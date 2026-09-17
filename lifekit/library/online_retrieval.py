@@ -317,8 +317,30 @@ def pick(ask, question: str, candidates: list[dict]) -> list[dict]:
     return chosen[:2] or candidates[:1]
 
 
+def section_by_gloss(question: str, topic: str) -> str | None:
+    """The section whose gloss words appear in the question or topic, when exactly one
+    section matches on its longest word; the glosses live in packs/sections.tsv."""
+    words = set(re.findall(r"[a-z0-9]+", f"{question} {topic}".lower()))
+    words |= {w[:-1] for w in words if w.endswith("s")}
+    best: dict[str, int] = {}
+    for row in sections.rows():
+        for phrase in [g.strip().lower() for g in row["gloss"].split(",")]:
+            for word in phrase.split():
+                if len(word) >= 3 and (word in words or word.rstrip("s") in words):
+                    best[row["id"]] = max(best.get(row["id"], 0), len(word))
+    if not best:
+        return None
+    top = max(best.values())
+    winners = [s for s, n in best.items() if n == top]
+    return winners[0] if len(winners) == 1 else None
+
+
 def choose_section(ask, prompt: str, question: str, topic: str) -> str:
-    """One section id; a reply that names none gets one stricter retry, then tools."""
+    """One section id: the gloss rule first, then the model, then one stricter retry,
+    then tools."""
+    ruled = section_by_gloss(question, topic)
+    if ruled:
+        return ruled
     for attempt in range(2):
         user = f"Question: {question}\nTopic: {topic}"
         if attempt:
