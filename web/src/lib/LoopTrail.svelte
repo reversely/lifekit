@@ -11,14 +11,14 @@
   const line = (e: LoopEvent): string => {
     switch (e.step) {
       case 'start': return `Question: ${e.text}`;
-      case 'named': return `The model named the topic: ${e.topic}`;
-      case 'searched': return `Searched ${e.source} and found ${e.titles?.length ?? 0} titles`;
-      case 'picked': return `The model chose ${(e.titles ?? []).join(', ')}`;
-      case 'filed': return `Filed under ${sectionTitle(e.section)}`;
-      case 'pulled': return `Pulled ${e.title}`;
+      case 'named': return `Topic: ${e.topic}`;
+      case 'searched': return `Searched offline Wikipedia: ${e.titles?.length ?? 0} articles`;
+      case 'picked': return `Selected: ${(e.titles ?? []).join(', ')}`;
+      case 'filed': return `Section: ${sectionTitle(e.section)}`;
+      case 'pulled': return `Downloaded: ${e.title}`;
       case 'covered': return 'Wrote the cover';
-      case 'resolved': return 'Answered from the new pages';
-      case 'exhausted': return `Found nothing${e.reason ? `: ${e.reason}` : ''}`;
+      case 'resolved': return 'Answered';
+      case 'exhausted': return `No match${e.reason ? `: ${e.reason}` : ''}`;
       case 'search_failed': return `Search failed (${e.source})`;
       case 'pull_failed': return `Could not pull ${e.title}`;
       default: return e.step;
@@ -51,4 +51,4 @@
     {/each}
   </div>
 {/each}
-{#if working}<div class="hint">{events.length ? 'The loop is working.' : 'Sending stored questions.'}</div>{/if}
+{#if working}<div class="hint">{events.length ? 'Searching.' : 'Sending stored questions.'}</div>{/if}

@@ -19,7 +19,7 @@
       if (d.added.length) parts.push(`${d.added.length} volume${d.added.length === 1 ? '' : 's'} added.`);
       if (d.candidates.length) parts.push(`${d.candidates.length} new download${d.candidates.length === 1 ? '' : 's'}.`);
       if (d.pending.length) parts.push(`${d.pending.length} question${d.pending.length === 1 ? '' : 's'} in progress.`);
-      line = parts.join(' ') || 'Nothing new since the last sync.';
+      line = parts.join(' ') || 'Nothing new.';
     } catch {
       line = 'The library on this box is not reachable.';
     }
@@ -52,7 +52,7 @@
       <div></div>
       <div>
         <div class="t">How it works</div>
-        <div class="s">Five stations show the ask, the offline ask, the loop, the curation, and the binder.</div>
+        <div class="s">Five steps: ask, ask offline, search, curation, binder.</div>
       </div>
       <div class="ic"><Icon name="help-circle" size={18} /></div>
     </a>

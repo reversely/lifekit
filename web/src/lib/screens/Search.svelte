@@ -67,7 +67,7 @@
   </div>
   <div class="askrow">
     <button class="chip ask" on:click={ask} disabled={asking || !query.trim()}>{asking ? 'Asking' : 'Ask'}</button>
-    <NetToggle size={14} /><span class="hint inline">{$online ? 'The model answers from the pages below.' : 'The app is offline, so a question is stored until the network returns.'}</span>
+    <NetToggle size={14} /><span class="hint inline">{$online ? 'Answers quote the pages below.' : 'Offline: questions are stored until the network returns.'}</span>
   </div>
   {#if reply?.answered}
     <div class="group">Answer</div>
@@ -80,7 +80,7 @@
     </div>
   {:else if stored}
     <div class="group">Stored</div>
-    <div class="res"><p>{stored === 'offline' ? 'The app is offline. The question is stored and the loop works the question when the network returns.' : 'No page in the library answers this question. The question is stored and the loop works the question on the next sync.'}</p><a class="open" href="#/digest">Open the digest</a></div>
+    <div class="res"><p>{stored === 'offline' ? 'Offline. Stored until the network returns.' : 'No page answers this. Stored for the next search.'}</p><a class="open" href="#/digest">Open the digest</a></div>
   {/if}
   <Chips {counts} {active} onFilter={(t) => (active = t)} />
   {#if vols.length}

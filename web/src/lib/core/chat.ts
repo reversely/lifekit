@@ -84,7 +84,7 @@ export async function send(question: string, online: boolean): Promise<void> {
   const fill = (m: Partial<ChatMessage>) => patch((t) => ({ ...t, messages: t.messages.map((x) => (x.id === pendingId ? { ...x, ...m, pending: false } : x)) }));
   if (!online) {
     enqueue(trimmed);
-    fill({ text: 'The app is offline. The question is stored and the loop works the question when the network returns.', stored: true });
+    fill({ text: 'Offline. Stored until the network returns.', stored: true });
     return;
   }
   const thread = get(threads).find((t) => t.id === threadId)!;
@@ -96,6 +96,6 @@ export async function send(question: string, online: boolean): Promise<void> {
     fill({ text: a.text, sources: a.sources, queued: a.queued });
   } catch {
     enqueue(trimmed);
-    fill({ text: 'The model is not reachable. The question is stored and the loop works the question when the model returns.', stored: true });
+    fill({ text: 'Model unreachable. Stored until the model returns.', stored: true });
   }
 }

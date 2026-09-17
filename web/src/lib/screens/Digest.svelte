@@ -42,7 +42,7 @@
       await load();
       dispatchEvent(new CustomEvent('lifekit:reload'));
     } catch (e) {
-      status = `Sync failed: ${String(e)}`;
+      status = `Send failed: ${String(e)}`;
     }
     working = false;
     pending = queued();
@@ -69,7 +69,7 @@
 <div class="screen">
   <div class="top">
     <h1>Digest</h1>
-    <span class="sub"><NetToggle size={14} />{cfg ? `${cfg.small}${cfg.loop ? '' : ', loop off'}` : ''}</span>
+    <span class="sub"><NetToggle size={14} />{cfg ? `${cfg.small}${cfg.loop ? '' : ', downloads off'}` : ''}</span>
   </div>
 
   {#if pending.length}
@@ -81,10 +81,10 @@
 
   {#if $online}
     <div class="syncrow">
-      <button class="res sync" on:click={runSync} disabled={working}>{working ? 'Working' : 'Sync now'}</button>
+      <button class="res sync" on:click={runSync} disabled={working}>{working ? 'Working' : 'Send stored questions'}</button>
     </div>
     {#if status}<div class="hint">{status}</div>{/if}
-    {#if events.length || working}<div class="group">Loop steps</div><LoopTrail {db} {events} {working} />{/if}
+    {#if events.length || working}<div class="group">Search steps</div><LoopTrail {db} {events} {working} />{/if}
   {:else}
     <div class="hint">Stored questions are sent when the network returns.</div>
   {/if}
@@ -92,7 +92,7 @@
   {#if data}
     {#if data.candidates.length}
       <div class="group">New downloads</div>
-      <div class="hint">The loop added these documents since the last digest.</div>
+      <div class="hint">Downloaded since the last digest.</div>
       {#each data.candidates as c (c.id)}
         <div class="res">
           <div class="src"><b>{c.title}</b>, {c.publisher}{#if c.section}, {db ? sectionTitle(db, c.section) : c.section}{/if}</div>
@@ -140,7 +140,7 @@
       {/each}
     {/if}
     {#if !data.answered.length && !data.added.length && !pending.length && !data.candidates.length && !data.pending.length}
-      <div class="hint">Nothing new since the last sync.</div>
+      <div class="hint">Nothing new.</div>
     {/if}
   {/if}
   <div class="askrow"><a class="chip" href="#/profile">Profile</a></div>

@@ -86,9 +86,9 @@
   }
 
   const stations = [
-    { title: 'Ask the library', text: 'The model answers from the pages on this device and quotes the page used. Edit the question, then press Ask.' },
-    { title: 'Ask without a network', text: 'This station switches the app to offline. Press Ask, and the browser stores the question until the network returns.' },
-    { title: 'The loop works the question', text: 'Back online, the loop takes the stored question. The model names a topic, searches the offline Wikipedia on this device, picks the articles that fit, files them into a binder, and answers the question again.' },
+    { title: 'Ask', text: 'Answers quote a page on this device. Edit the question, press Ask.' },
+    { title: 'Ask offline', text: 'Offline. Press Ask; the browser stores the question until the network returns.' },
+    { title: 'Search', text: 'Each stored question: topic, offline Wikipedia search, article choice, section, download, answer.' },
     { title: 'Curation', text: 'A new download shows its description and its section. Add it to the library, or remove it. A removed document is not pulled again.' },
     { title: 'The binder', text: 'An admitted document lists in the binder as a volume, with cover, licence, and page count, and the New download marker is removed.' },
   ];
@@ -147,7 +147,7 @@
         </div>
       {:else if reply}
         <div class="group">Stored</div>
-        <div class="res"><p>No page in the library answers this question. The model noted what is missing{reply.wanted ? `: ${reply.wanted}` : ''}. The question is stored for the loop.</p></div>
+        <div class="res"><p>No page answers this. Missing{reply.wanted ? `: ${reply.wanted}` : ''}. Stored.</p></div>
       {/if}
     {:else if step === 2}
       <div class="top"><h1>Search</h1><span class="sub"><NetToggle size={14} /></span></div>
@@ -155,22 +155,22 @@
       <div class="askrow"><button class="chip ask" on:click={ask2}>Ask</button><span class="hint inline">The app is offline, so the browser stores the question until the network returns.</span></div>
       {#if stored || queued().some((x) => x.text === q2)}
         <div class="group">Stored</div>
-        <div class="res"><p>The app is offline. The browser stores this question, and the next station works the question.</p></div>
+        <div class="res"><p>Offline. Stored; step 3 searches this question.</p></div>
       {/if}
     {:else if step === 3}
       <div class="top"><h1>Digest</h1><span class="sub"><NetToggle size={14} />{#if sent}{sent} sent{/if}</span></div>
       {#if !working && ran}
-        <div class="syncrow"><button class="res sync" on:click={runLoop}>Run the loop again</button></div>
+        <div class="syncrow"><button class="res sync" on:click={runLoop}>Search again</button></div>
       {/if}
-      <div class="group">The loop, step by step</div>
+      <div class="group">Search steps</div>
       <LoopTrail {db} {events} {working} />
-      {#if !working && ran && !events.some((e) => !e.done)}<div class="hint">No question was stored. Go back to station 2, press Ask, then return.</div>{/if}
+      {#if !working && ran && !events.some((e) => !e.done)}<div class="hint">No stored question. Return to step 2 and press Ask.</div>{/if}
     {:else if step === 4}
       {#if candidate}
         <Volume {db} id={candidate.id} />
       {:else}
         <div class="top"><h1>New download</h1></div>
-        <div class="hint">No new download is present. Run the loop on the previous station, then return.</div>
+        <div class="hint">No new download. Run the search on step 3.</div>
       {/if}
     {:else}
       <Section {db} id={section} />

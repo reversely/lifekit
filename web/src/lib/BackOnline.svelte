@@ -117,9 +117,9 @@
         {#each stored as q}<p class="q">{q.text}</p>{/each}
         <p class="state">{sendState === 'sending' ? `Sending ${stored.length} question${stored.length === 1 ? '' : 's'}.` : sendState === 'sent' ? 'Sent.' : ''}</p>
       {/if}
-      <h3>Search agent</h3>
+      <h3>Searches</h3>
       {#if loopState === 'off'}
-        <p class="state">The loop is off on this instance.</p>
+        <p class="state">Downloads are off.</p>
       {:else if loopState === 'nothing'}
         <p class="state">Nothing to work.</p>
       {:else}

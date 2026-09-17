@@ -60,8 +60,8 @@ check('modal opens on the transition', await until(async () => !!(await page.$('
 check('modal shows a round-trip line', await until(async () => /Round trip \d+ ms/.test(await text()), 20, 500));
 check('modal lists the stored question', /splint a broken wrist/.test(await text()));
 check('modal sends the stored question', await until(async () => /Sent\./.test(await text()), 30, 1000));
-check('modal trail runs the loop', await until(async () => /named the topic|Searched|The loop is off|Nothing to work/.test(await text()), 60, 2000));
-check('modal reaches Done', await until(async () => /Done\.|The loop is off|Nothing to work/.test(await text()), 180, 2000));
+check('modal trail runs the loop', await until(async () => /Topic:|Searched|Downloads are off|Nothing to work/.test(await text()), 60, 2000));
+check('modal reaches Done', await until(async () => /Done\.|Downloads are off|Nothing to work/.test(await text()), 180, 2000));
 await shot('3-back-online');
 await clickText('.modal button', 'Close'); await wait(300);
 check('Close dismisses the modal', !(await page.$('.modal')));
