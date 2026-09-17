@@ -99,6 +99,7 @@ export interface Config {
   zim?: { file: string; articles: number } | null;
   sections?: { id: string; order: number; title: string; scope: string; gloss: string; icon: string }[];
   questions?: Record<string, string[]>;
+  video_tour?: TourStep[];
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
@@ -205,3 +206,39 @@ export async function events(since = 0): Promise<RetrievalEvent[]> {
   if (!r.ok) return [];
   return (await r.json()).events as RetrievalEvent[];
 }
+
+/** Video summarization: the clips on this instance and the vision model. */
+export interface Clip { name: string; seconds: number }
+export const clips = async (): Promise<{ clips: Clip[]; model: string }> => (await api('/api/vss/clips')).json();
+export interface VideoEvent { step: 'start' | 'frames' | 'chunk' | 'report' | 'done' | 'failed'; start?: number; end?: number; count?: number; text?: string; seconds?: number; model?: string; elapsed?: number }
+/** POST /api/vss/stream: one record per step until done or failed. */
+export async function videoStream(body: { clip: string; prompt: string; tracking: string }, onEvent: (e: VideoEvent) => void): Promise<void> {
+  const r = await api('/api/vss/stream', { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!r.ok || !r.body) throw new Error(`video: ${r.status}`);
+  const reader = r.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let index;
+    while ((index = buffer.indexOf('\n')) >= 0) {
+      const line = buffer.slice(0, index).trim();
+      buffer = buffer.slice(index + 1);
+      if (line) onEvent(JSON.parse(line) as VideoEvent);
+    }
+  }
+}
+
+/** The tour rows of packs/video-tour.tsv: the control each step anchors to, its title, its text. */
+export interface TourStep { anchor: string; title: string; text: string }
+/** POST /api/vss/segment: one recorded camera segment as the body; returns its description. */
+export async function videoSegment(blob: Blob, q: { start: number; prompt: string; tracking: string }): Promise<{ start: number; end: number; text: string }> {
+  const params = new URLSearchParams({ start: String(q.start), prompt: q.prompt, tracking: q.tracking });
+  const r = await api(`/api/vss/segment?${params}`, { method: 'POST', headers: { 'Content-Type': blob.type || 'video/webm' }, body: blob });
+  if (!r.ok) throw new Error(`segment: ${r.status}`);
+  return r.json();
+}
+/** POST /api/vss/report: the report over the segments a camera run described. */
+export const videoReport = (body: { prompt: string; notes: { start: number; end: number; text: string }[] }) => post<{ text: string }>('/api/vss/report', body);

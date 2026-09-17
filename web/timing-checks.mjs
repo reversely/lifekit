@@ -18,12 +18,12 @@ for (const path of ['/api/health', '/api/config', '/api/digest', '/api/candidate
 const [chatMs] = await time(() => fetch(`${BASE}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...H }, body: JSON.stringify({ question: 'how much bleach for a gallon of water', history: [] }) }));
 say('chat reply', chatMs, budgets.chatMs);
 
-const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+const browser = await puppeteer.launch({ executablePath: process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true, args: process.env.CHROME ? ['--no-sandbox'] : [] });
 for (const width of [390, 1440]) {
   const page = await browser.newPage();
   await page.evaluateOnNewDocument((tok) => { try { if (tok) localStorage.setItem('lifekit.token', tok); localStorage.setItem('lifekit.welcomeDone', '1'); } catch {} }, TOKEN);
   await page.setViewport({ width, height: 900, isMobile: width < 900 });
-  for (const [name, route, sel] of [['home', '#/', '.wordmark'], ['recent', '#/recent', '.card'], ['digest', '#/digest', '.screen'], ['chat', '#/chat', '.input-row input']]) {
+  for (const [name, route, sel] of [['home', '#/', '.wordmark'], ['recent', '#/recent', '.card'], ['digest', '#/digest', '.screen'], ['chat', '#/chat', '.input-row input'], ['video', '#/video', '.screen.video .tab']]) {
     const t0 = performance.now();
     await page.goto(`${BASE}/?t=${width}${route}`, { waitUntil: 'domcontentloaded' });
     const paint = await page.evaluate(() => performance.getEntriesByType('paint').find((e) => e.name === 'first-contentful-paint')?.startTime ?? 0);

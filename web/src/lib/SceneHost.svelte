@@ -37,7 +37,7 @@
 </script>
 
 {#if wide && Scene}
-  <svelte:component this={Scene} {accent} {light} />
+  {#key animated}<svelte:component this={Scene} {accent} {light} home={animated} />{/key}
 {:else}
   {#key animated + String(light)}<Backdrop {animated} {light} />{/key}
 {/if}

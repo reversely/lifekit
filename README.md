@@ -35,6 +35,17 @@ bash scripts/box_up.sh
 OpenAI-compatible server or `hf:<model>` for Hugging Face inference. `LIFEKIT_ONLINE_RETRIEVAL=off`
 keeps stored questions from being worked, as on the public Space.
 
+### Video summarization
+
+The screen at `#/video` describes a clip in ten-second chunks and writes a report of
+time-stamped events. Cosmos Reason2 8B reads the frames, served by vLLM in a container on
+port 8010; `scripts/cosmos_up.sh` lists the four steps (agree to the model terms on Hugging
+Face, download, configure the Docker GPU runtime, start the container). `.env.box` carries
+`LIFEKIT_VISION_URL=http://127.0.0.1:8010/v1` and `LIFEKIT_VISION_MODEL=cosmos-reason2-8b`;
+any server that takes images on the chat route works in their place. Clips are `.mp4` files
+in `packs/vss-demo`, each with a manifest row; the prompts are the `vss_summary` and
+`vss_tracking` rows of `packs/questions.tsv`.
+
 ## Develop
 
 ```

@@ -10,6 +10,9 @@
   /** The section accent as a hex string; null means the home teal. */
   export let accent: string | null = null;
   export let light = false;
+  // On the home the ridges rise into the lower half as in the animated shader; on every
+  // other screen they stay in the bottom fifth, clear of the reading area, as in the still one.
+  export let home = false;
 
   const HOME = { accent: '#35576B', glow: '#8FC6BF', mote: '#B5E3DC' };
   const DEEP_TOP = '#0B1118';
@@ -39,17 +42,17 @@
         top: PAPER_TOP,
         bottom: PAPER_BASE,
         glow: hex ? mixHex(a, '#ffffff', 0.2) : HOME.glow,
-        fog: mixHex(a, PAPER_BASE, 0.85),
-        terrain: mixHex(a, PAPER_TOP, 0.85),
+        fog: mixHex(a, PAPER_BASE, 0.94),
+        terrain: mixHex(a, PAPER_BASE, 0.9),
         mote: mixHex(a, '#ffffff', 0.35),
       };
     }
     return {
-      top: mixHex(a, DEEP_TOP, 0.72),
-      bottom: mixHex(a, DEEP_BASE, 0.88),
+      top: mixHex(a, DEEP_TOP, 0.9),
+      bottom: mixHex(a, DEEP_BASE, 0.95),
       glow: hex ? mixHex(a, '#ffffff', 0.2) : HOME.glow,
-      fog: mixHex(a, DEEP_BASE, 0.8),
-      terrain: mixHex(a, DEEP_BASE, 0.82),
+      fog: mixHex(a, DEEP_BASE, 0.93),
+      terrain: mixHex(a, DEEP_BASE, 0.9),
       mote: hex ? mixHex(a, '#ffffff', 0.35) : HOME.mote,
     };
   }
@@ -59,7 +62,7 @@
   function materialTint(r: Roles, hex: string | null, paper: boolean, toward: 'top' | 'bottom' | 'none', amount: number): THREE.Color {
     const terrain = new THREE.Color(r.terrain);
     if (toward !== 'none') terrain.lerp(new THREE.Color(toward === 'top' ? r.top : r.bottom), amount);
-    const tint = new THREE.Color(hex ?? HOME.accent).multiplyScalar(paper ? 0.02 : 0.05);
+    const tint = new THREE.Color(hex ?? HOME.accent).multiplyScalar(paper ? 0.01 : 0.02);
     return terrain.add(tint);
   }
 
@@ -85,9 +88,9 @@ void main() {
   vec2 uv = xy / res;
   vec3 col = mix(top, bottom, smoothstep(0.0, 1.0, uv.y));
   float d = distance(uv * vec2(1.0, 1.7), vec2(0.5, 0.06));
-  col += glow * exp(-d * d * 7.0) * 0.13 * strength;
+  col += glow * exp(-d * d * 7.0) * 0.06 * strength;
   float rays = ray(uv, -0.12, -0.30, 0.040) + ray(uv, 0.02, 0.04, 0.060) + ray(uv, 0.15, 0.34, 0.040);
-  col += glow * rays * 0.10 * strength;
+  col += glow * rays * 0.04 * strength;
   float grain = hash(xy.x + xy.y * 311.7) - 0.5;
   col += grain * 0.02;
   gl_FragColor = vec4(col, 1.0);
@@ -106,18 +109,29 @@ void main() {
     const b = hash(seg + 1 + seed * 91.7);
     return base + amp * (a * (1 - f) + b * f);
   };
+  // A ridge is a grid of triangles: columns across the width, rows from the ridge line
+  // down to below the frustum. Every vertex carries its own depth offset, so flat shading
+  // gives each triangle a distinct normal and the lamp picks out facets.
   function ridgeGeometry(seed: number, width: number, height: number, base: number, amp: number): THREE.BufferGeometry {
-    const shape = new THREE.Shape();
-    const steps = 42;
-    shape.moveTo(-width / 2, -height);
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const y = (ridge(t, seed, base, amp) - 0.5) * height;
-      shape.lineTo(-width / 2 + t * width, y);
+    const cols = 48;
+    const rows = 6;
+    const positions: number[] = [];
+    const vertex = (c: number, r: number) => {
+      const t = c / cols;
+      const top = (ridge(t, seed, base, amp) - 0.5) * height;
+      const bottom = -height;
+      const y = top + (bottom - top) * (r / rows);
+      const jitter = (hash(c * 13.1 + r * 7.7 + seed * 31.3) - 0.5) * height * 0.12;
+      return [-width / 2 + t * width, y, jitter * (1 - r / rows)];
+    };
+    for (let c = 0; c < cols; c++) {
+      for (let r = 0; r < rows; r++) {
+        const a = vertex(c, r), b = vertex(c + 1, r), d = vertex(c, r + 1), e = vertex(c + 1, r + 1);
+        positions.push(...a, ...d, ...b, ...b, ...d, ...e);
+      }
     }
-    shape.lineTo(width / 2, -height);
-    shape.closePath();
-    const geometry = new THREE.ShapeGeometry(shape, 1);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.computeVertexNormals();
     return geometry;
   }
@@ -188,11 +202,16 @@ void main() {
     // Ridge heights follow the shader: the far ridge sits 38 percent up the frame, the
     // middle 28, the near 18. The far ridge mixes toward the gradient top, the middle
     // stays the terrain role, the near ridge mixes toward the gradient base.
-    const ridgeSpecs: { seed: number; z: number; base: number; amp: number; toward: 'top' | 'bottom' | 'none'; amount: number }[] = [
-      { seed: 3, z: -6, base: 0.38, amp: 0.12, toward: 'top', amount: 0.55 },
-      { seed: 5, z: -4, base: 0.28, amp: 0.11, toward: 'none', amount: 0 },
-      { seed: 7, z: -2, base: 0.18, amp: 0.1, toward: 'bottom', amount: 0.6 },
-    ];
+    const ridgeSpecs: { seed: number; z: number; base: number; amp: number; toward: 'top' | 'bottom' | 'none'; amount: number }[] = home
+      ? [
+          { seed: 3, z: -6, base: 0.38, amp: 0.12, toward: 'top', amount: 0.55 },
+          { seed: 5, z: -4, base: 0.28, amp: 0.11, toward: 'none', amount: 0 },
+          { seed: 7, z: -2, base: 0.18, amp: 0.1, toward: 'bottom', amount: 0.6 },
+        ]
+      : [
+          { seed: 3, z: -6, base: 0.2, amp: 0.08, toward: 'top', amount: 0.5 },
+          { seed: 7, z: -2, base: 0.1, amp: 0.06, toward: 'bottom', amount: 0.55 },
+        ];
     const ridges = ridgeSpecs.map((spec) => {
       const height = 2 * Math.tan((camera.fov * Math.PI) / 360) * -spec.z;
       const width = height * 3;
@@ -254,10 +273,10 @@ void main() {
       bgMaterial.uniforms.bottom.value.copy(rgb(r.bottom));
       bgMaterial.uniforms.glow.value.copy(rgb(r.glow));
       bgMaterial.uniforms.terrain.value.copy(rgb(r.terrain));
-      bgMaterial.uniforms.strength.value = paper ? 0.25 : 1;
+      bgMaterial.uniforms.strength.value = paper ? 0 : 1;
       fog.color.set(r.fog);
       lamp.color.set(r.glow);
-      lamp.intensity = paper ? 0.6 : 1.8;
+      lamp.intensity = paper ? 0.3 : 1.8;
       ambient.color.set(r.top);
       ridges.forEach(({ mesh, spec }) => {
         // The role colour is the colour on screen (emissive); the lamp adds the facet highlights.
