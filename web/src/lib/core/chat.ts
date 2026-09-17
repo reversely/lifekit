@@ -1,6 +1,6 @@
 // Chat threads, carried over from the flux app's chat store: every thread persists in
 // this browser, newest first; a send appends a user turn and a pending assistant turn,
-// then the answer fills it. Offline, the question is stored for the fetch pass instead.
+// then the answer fills it. Offline, the question is stored for the online retrieval instead.
 
 import { writable, get } from 'svelte/store';
 import { enqueue } from './api';
@@ -84,7 +84,7 @@ export async function send(question: string, online: boolean): Promise<void> {
   const fill = (m: Partial<ChatMessage>) => patch((t) => ({ ...t, messages: t.messages.map((x) => (x.id === pendingId ? { ...x, ...m, pending: false } : x)) }));
   if (!online) {
     enqueue(trimmed);
-    fill({ text: 'Offline. Stored until the network returns.', stored: true });
+    fill({ text: 'Offline. Queued until the network returns.', stored: true });
     return;
   }
   const thread = get(threads).find((t) => t.id === threadId)!;
@@ -96,6 +96,6 @@ export async function send(question: string, online: boolean): Promise<void> {
     fill({ text: a.text, sources: a.sources, queued: a.queued });
   } catch {
     enqueue(trimmed);
-    fill({ text: 'Model unreachable. Stored until the model returns.', stored: true });
+    fill({ text: 'Model unreachable. Queued until the model returns.', stored: true });
   }
 }

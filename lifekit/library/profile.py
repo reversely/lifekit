@@ -2,7 +2,7 @@
 
 docs/content/library-schema.md 1.7 fixes the onboarding questions; on a box the
 answers live in one row of library.sqlite. A pull rule (packs/pull_rules.tsv)
-maps answers to a seeded question the fetch pass works, so a match stages a document
+maps answers to a seeded question the online retrieval works, so a match stages a document
 for the owner's verdict rather than pulling one blind. Rules are data: a new
 region or activity needs rows, not code.
 
@@ -95,7 +95,7 @@ def _fill(text: str, profile: dict) -> str:
 
 def evaluate(db, profile: dict) -> list[dict]:
     """Seed one stored question per matching rule not yet seeded. Returns what was seeded."""
-    from .fetchpass import store_question
+    from .online_retrieval import store_question
 
     seen = {r[0] for r in db.execute("SELECT origin FROM question WHERE origin != 'asked'")}
     seeded = []

@@ -1,7 +1,7 @@
 # LifeKit instance as a systemd service. Install on a box as root:
 #   cp scripts/lifekit.service /etc/systemd/system/lifekit.service
 #   systemctl daemon-reload && systemctl enable --now lifekit
-# Settings come from <repo>/.env.box (LIFEKIT_MODEL_SMALL, LIFEKIT_FETCH, LIFEKIT_PORT).
+# Settings come from <repo>/.env.box (LIFEKIT_MODEL_SMALL, LIFEKIT_ONLINE_RETRIEVAL, LIFEKIT_PORT).
 [Unit]
 Description=LifeKit library, API, and web app
 After=network-online.target ollama.service

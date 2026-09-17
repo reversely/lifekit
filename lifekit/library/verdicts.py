@@ -1,4 +1,4 @@
-"""The owner's verdict on a fetch pass addition: admit, refile, or reject.
+"""The owner's verdict on a online retrieval addition: admit, refile, or reject.
 
 docs/content/deployments-and-approval.md 3.3. The verdict lives in
 packs/volumes/<id>/verdict.json so a rebuild keeps it, and a refile also writes
@@ -27,7 +27,7 @@ def read_verdict(volume_id: str) -> dict:
 
 
 def rejected_ids() -> set[str]:
-    """Volumes the owner rejected; the fetch pass never pulls them again."""
+    """Volumes the owner rejected; the online retrieval never pulls them again."""
     out = set()
     if not VOLUMES_DIR.is_dir():
         return out

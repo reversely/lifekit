@@ -14,6 +14,10 @@ documents arrive one by one, and a digest reports what was added and answers the
 the reader asked while offline. The app rewrites nothing; every generated line describes a
 document or quotes one.
 
+## Words
+
+Every word in this document means what it says. A metaphor is a violation. A label with no content is a violation.
+
 ## Conventions
 
 | Term | Names |
@@ -50,7 +54,7 @@ One row per volume, whatever put it there:
 
 - the stock set for the twelve binders on first install;
 - profile and trip rules, when onboarding or a change of place matches;
-- the fetch pass, when a stored question is worked online and a source is found.
+- the online retrieval, when a stored question is worked online and a source is found.
 
 States: `queued`, `downloading`, `extracted`, `indexed`, `shelved`, `failed` with the
 reason. A volume shelves into its binders automatically at `indexed`; the reader can move
@@ -80,7 +84,7 @@ no advice and no rewritten source text.
 
 A question asked with the library reachable is answered from it: the answer quotes the
 passage it rests on and links the page. A question the library cannot answer is stored
-with the profile of the moment. Online, the fetch pass names a topic, finds a source, queues it
+with the profile of the moment. Online, the online retrieval names a topic, finds a source, queues it
 as a volume, and, once the volume is indexed, asks the question again. An answered
 question appears in the next digest.
 

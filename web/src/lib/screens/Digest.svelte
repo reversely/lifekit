@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { config as fetchConfig, digest as fetchDigest, flush, queued, syncStream, verdict as sendVerdict, type Config, type Digest, type FetchEvent } from '../core/api';
+  import { config as fetchConfig, digest as fetchDigest, flush, queued, syncStream, verdict as sendVerdict, type Config, type Digest, type RetrievalEvent } from '../core/api';
   import { applyVerdict } from '../core/db';
   import { sectionTitle } from '../core/sections';
-  import FetchSteps from '../FetchSteps.svelte';
+  import RetrievalSteps from '../RetrievalSteps.svelte';
   import { online } from '../core/net';
   import NetToggle from '../NetToggle.svelte';
   import type { Database } from '../core/db';
@@ -12,7 +12,7 @@
   let data: Digest | null = null;
   let cfg: Config | null = null;
   let status = '';
-  let events: FetchEvent[] = [];
+  let events: RetrievalEvent[] = [];
   let working = false;
   $: pending = queued();
 
@@ -69,11 +69,11 @@
 <div class="screen">
   <div class="top">
     <h1>Digest</h1>
-    <span class="sub"><NetToggle size={14} />{cfg ? `${cfg.small}${cfg.fetch ? '' : ', downloads off'}` : ''}</span>
+    <span class="sub"><NetToggle size={14} />{cfg ? `${cfg.small}${cfg.online_retrieval ? '' : ', downloads off'}` : ''}</span>
   </div>
 
   {#if pending.length}
-    <div class="group">Waiting for the network</div>
+    <div class="group">Queue</div>
     {#each pending as q}
       <div class="res"><p>{q.text}</p><div class="src">Stored {q.at.slice(0, 16).replace('T', ' ')}</div></div>
     {/each}
@@ -81,10 +81,10 @@
 
   {#if $online}
     <div class="syncrow">
-      <button class="res sync" on:click={runSync} disabled={working}>{working ? 'Working' : 'Send stored questions'}</button>
+      <button class="res sync" on:click={runSync} disabled={working}>{working ? 'Working' : 'Run online retrieval'}</button>
     </div>
     {#if status}<div class="hint">{status}</div>{/if}
-    {#if events.length || working}<div class="group">Search steps</div><FetchSteps {db} {events} {working} />{/if}
+    {#if events.length || working}<div class="group">Online retrieval</div><RetrievalSteps {db} {events} {working} />{/if}
   {:else}
     <div class="hint">Stored questions are sent when the network returns.</div>
   {/if}
@@ -110,7 +110,7 @@
       {/each}
     {/if}
     {#if data.pending.length}
-      <div class="group">Questions in progress</div>
+      <div class="group">Queue</div>
       {#each data.pending as q}
         <div class="res">
           <p>{q.text}</p>

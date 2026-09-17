@@ -20,7 +20,7 @@ VOLUMES_DIR = LOCAL_PACKS / "volumes"
 
 
 def read_volumes(shelf: str) -> list[dict]:
-    """The shelf's curated list plus what the fetch pass learned (learned.tsv, same columns)."""
+    """The shelf's curated list plus what the online retrieval learned (learned.tsv, same columns)."""
     rows: list[dict] = []
     for name in ("volumes.tsv", "learned.tsv"):
         path = LOCAL_PACKS / "shelves" / shelf / name

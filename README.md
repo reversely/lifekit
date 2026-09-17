@@ -30,7 +30,7 @@ bash scripts/box_up.sh
 ```
 
 `LIFEKIT_MODEL_SMALL` and `LIFEKIT_MODEL_ANSWER` take `openai:<base_url>:<model>` for an
-OpenAI-compatible server or `hf:<model>` for Hugging Face inference. `LIFEKIT_FETCH=off`
+OpenAI-compatible server or `hf:<model>` for Hugging Face inference. `LIFEKIT_ONLINE_RETRIEVAL=off`
 keeps stored questions from being worked, as on the public Space.
 
 ## Develop

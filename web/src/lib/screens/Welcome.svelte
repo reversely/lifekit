@@ -73,7 +73,7 @@
 <div class="screen">
   <div class="top">
     <h1>Welcome</h1>
-    <span class="sub">{done ? 'Questions to search' : q ? `${step + 1} of ${questions.length}` : ''}</span>
+    <span class="sub">{done ? 'Queue' : q ? `${step + 1} of ${questions.length}` : ''}</span>
   </div>
 
   {#if error}

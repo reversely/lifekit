@@ -184,7 +184,7 @@ if __name__ == "__main__":
 
 
 def write_covers_for(volume_ids: list[str]) -> None:
-    """Cover and digest line for specific volumes (the fetch pass's learned volumes)."""
+    """Cover and digest line for specific volumes (the online retrieval's learned volumes)."""
     db = connect(DB_PATH)
     db.executescript(
         "CREATE TABLE IF NOT EXISTS cover (volume_id TEXT PRIMARY KEY, text TEXT, digest_line TEXT,"

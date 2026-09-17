@@ -124,7 +124,7 @@ render.py       the five screens from the tables (prototype renderer)
 | page | pages via build | Search (open page), thumbnails |
 | passage, passage_fts | segment via build | Search, answers, RAG tests |
 | cover | covers.py | cards, Search volumes, Digest |
-| question, digest | the API and the fetch pass | Digest, Search empty state |
+| question, digest | the API and the online retrieval | Digest, Search empty state |
 | provenance | build, covers | "why does it say this" |
 
 ### 2.3 Files on disk
@@ -133,7 +133,7 @@ render.py       the five screens from the tables (prototype renderer)
 packs/
   library.sqlite
   shelves/<shelf>/volumes.tsv     the curated list
-  shelves/<shelf>/learned.tsv     what the fetch pass pulled, same columns
+  shelves/<shelf>/learned.tsv     what the online retrieval pulled, same columns
   volumes/<id>/source.<ext>, source.meta.json, cover.md, tags.json
 ```
 
@@ -141,11 +141,11 @@ packs/
 `volumes/<id>/` directory plus its rows; the queue moves it through `queued`,
 `downloading`, `extracted`, `indexed`, `shelved`.
 
-### 2.4 The API and the fetch pass
+### 2.4 The API and the online retrieval
 
 `lifekit/api.py` serves the app (FastAPI locally; the same functions mount beside Gradio on
 the Space): `GET /api/search`, `POST /api/answer`, `POST /api/questions`, `POST /api/sync`,
-`GET /api/digest`, `GET /api/library.sqlite`. `lifekit/library/fetch pass.py` works stored
+`GET /api/digest`, `GET /api/library.sqlite`. `lifekit/library/online retrieval.py` works stored
 questions: name the topic (model), search an open source class (Wikipedia first), pull the
 page as a learned volume (cut, indexed, tagged, recorded in the shelf's `learned.tsv` so a
 rebuild keeps it), re-ask with the question and topic words, write the digest.

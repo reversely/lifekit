@@ -21,9 +21,9 @@
         <a class="line" href={`#/volume/${s.volume}?page=${s.page}&passage=${encodeURIComponent(s.passage)}`}><Icon name="book-open" size={12} />{s.title}, page {s.page}</a>
       {/each}
       {#if message.queued}
-        <a class="line" href="#/digest"><Icon name="plus-circle" size={12} />Stored for the library: {message.queued.topic}<Icon name="chevron-right" size={12} /></a>
+        <a class="line" href="#/digest"><Icon name="plus-circle" size={12} />Queued for online retrieval: {message.queued.topic}<Icon name="chevron-right" size={12} /></a>
       {:else if message.stored}
-        <a class="line" href="#/digest"><Icon name="clock" size={12} />Stored<Icon name="chevron-right" size={12} /></a>
+        <a class="line" href="#/digest"><Icon name="clock" size={12} />Queued<Icon name="chevron-right" size={12} /></a>
       {/if}
     {/if}
   </div>

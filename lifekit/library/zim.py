@@ -1,8 +1,8 @@
 """An offline Wikipedia as a source class: a Kiwix ZIM file in packs/zim/.
 
-A ZIM carries rendered article HTML and its own full-text index, so the fetch pass
+A ZIM carries rendered article HTML and its own full-text index, so the online retrieval
 can search and pull with no network. The first *.zim under packs/zim/ (largest
-first) is the one in use; none means the class is absent and the fetch pass goes to
+first) is the one in use; none means the class is absent and the online retrieval goes to
 the live search.
 """
 

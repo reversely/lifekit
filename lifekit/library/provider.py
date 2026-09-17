@@ -53,8 +53,8 @@ def endpoint(kind: str = "small") -> Endpoint:
     return parse(small)
 
 
-def fetch_enabled() -> bool:
-    return os.environ.get("LIFEKIT_FETCH", "on").lower() not in ("off", "0", "false", "no")
+def online_retrieval_enabled() -> bool:
+    return os.environ.get("LIFEKIT_ONLINE_RETRIEVAL", "on").lower() not in ("off", "0", "false", "no")
 
 
 def ask(system: str, user: str, max_tokens: int = 300, kind: str = "small") -> str:
@@ -83,9 +83,9 @@ def chat(messages: list[dict], max_tokens: int = 300, kind: str = "small") -> st
 
 
 def describe() -> dict:
-    """For GET /api/config: what this instance calls, and whether the fetch pass runs."""
+    """For GET /api/config: what this instance calls, and whether the online retrieval runs."""
     return {
         "small": endpoint("small").name,
         "answer": endpoint("answer").name,
-        "fetch": fetch_enabled(),
+        "online_retrieval": online_retrieval_enabled(),
     }

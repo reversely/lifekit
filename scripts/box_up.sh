@@ -8,13 +8,13 @@
 # Settings (defaults suit a box running Ollama with nemotron-3-nano; a NIM works the same way):
 #   LIFEKIT_MODEL_SMALL   openai:http://localhost:11434/v1:nemotron-3-nano
 #   LIFEKIT_MODEL_ANSWER  same as small unless set
-#   LIFEKIT_FETCH          on
+#   LIFEKIT_ONLINE_RETRIEVAL          on
 #   LIFEKIT_PORT          8008
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 export LIFEKIT_MODEL_SMALL="${LIFEKIT_MODEL_SMALL:-openai:http://localhost:11434/v1:nemotron-3-nano}"
-export LIFEKIT_FETCH="${LIFEKIT_FETCH:-on}"
+export LIFEKIT_ONLINE_RETRIEVAL="${LIFEKIT_ONLINE_RETRIEVAL:-on}"
 PORT="${LIFEKIT_PORT:-8008}"
 
 step() { printf '\n== %s\n' "$*"; }
@@ -28,7 +28,7 @@ base="${LIFEKIT_MODEL_SMALL#openai:}"; base="${base%:*}"
 if curl -sf -m 5 "$base/models" >/dev/null; then
   echo "reachable: $base"
 else
-  echo "not reachable: $base (the API still serves; answers and the fetch pass will fail until it is)"
+  echo "not reachable: $base (the API still serves; answers and the online retrieval will fail until it is)"
 fi
 
 step "library"

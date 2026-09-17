@@ -74,7 +74,7 @@ export interface Profile {
 export interface Config {
   small: string;
   answer: string;
-  fetch: boolean;
+  online_retrieval: boolean;
   zim?: { file: string; articles: number } | null;
   sections?: { id: string; order: number; title: string; scope: string; gloss: string; icon: string }[];
   questions?: Record<string, string[]>;
@@ -130,8 +130,8 @@ export async function flush(): Promise<number> {
   return items.length;
 }
 
-/** One record per fetch pass step, as the server emits it. */
-export interface FetchEvent {
+/** One record per online retrieval step, as the server emits it. */
+export interface RetrievalEvent {
   question: string;
   step: string;
   at: string;
@@ -152,14 +152,14 @@ export interface FetchEvent {
   note?: string;
 }
 
-/** Run the fetch pass and receive each step as it happens. Resolves when the pass ends. */
-export async function syncStream(onEvent: (e: FetchEvent) => void): Promise<FetchEvent | null> {
+/** Run the online retrieval and receive each step as it happens. Resolves when the pass ends. */
+export async function syncStream(onEvent: (e: RetrievalEvent) => void): Promise<RetrievalEvent | null> {
   const r = await fetch(`${BASE}/api/sync/stream`, { cache: 'no-store' });
   if (!r.ok || !r.body) throw new Error(`sync: ${r.status}`);
   const reader = r.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-  let last: FetchEvent | null = null;
+  let last: RetrievalEvent | null = null;
   for (;;) {
     const { value, done } = await reader.read();
     if (done) break;
@@ -169,7 +169,7 @@ export async function syncStream(onEvent: (e: FetchEvent) => void): Promise<Fetc
       const line = buffer.slice(0, index).trim();
       buffer = buffer.slice(index + 1);
       if (!line) continue;
-      const event = JSON.parse(line) as FetchEvent;
+      const event = JSON.parse(line) as RetrievalEvent;
       last = event;
       onEvent(event);
     }

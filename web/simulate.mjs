@@ -1,4 +1,4 @@
-// Simulate the online/offline fetch pass in a real Chrome. Usage: node simulate.mjs <outdir> <stamp>
+// Simulate the online/offline online retrieval in a real Chrome. Usage: node simulate.mjs <outdir> <stamp>
 // 1. Offline: ask a question the library cannot answer; it is stored in the browser.
 // 2. Online: open the digest, sync; the stored question is sent, worked, and answered.
 import puppeteer from 'puppeteer-core';

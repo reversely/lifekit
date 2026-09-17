@@ -1,30 +1,30 @@
 <script lang="ts">
-  // The fetch pass's steps for one pass, in the order they happened, in plain lines.
-  import type { FetchEvent } from './core/api';
+  // The online retrieval's steps for one pass, in the order they happened, in plain lines.
+  import type { RetrievalEvent } from './core/api';
   import type { Database } from './core/db';
   import { sectionTitle as titleOf } from './core/sections';
   export let db: Database | null = null;
-  export let events: FetchEvent[] = [];
+  export let events: RetrievalEvent[] = [];
   export let working = false;
 
   const sectionTitle = (id?: string) => (id ? (db ? titleOf(db, id) : id) : '');
-  const line = (e: FetchEvent): string => {
+  const line = (e: RetrievalEvent): string => {
     switch (e.step) {
       case 'start': return `Question: ${e.text}`;
       case 'named': return `Topic: ${e.topic}`;
       case 'searched': return `Searched offline Wikipedia: ${e.titles?.length ?? 0} articles`;
       case 'picked': return `Selected: ${(e.titles ?? []).join(', ')}`;
       case 'filed': return `Section: ${sectionTitle(e.section)}`;
-      case 'pulled': return `Downloaded: ${e.title}`;
+      case 'pulled': return `Retrieved: ${e.title}`;
       case 'covered': return 'Wrote the cover';
-      case 'resolved': return 'Answered';
+      case 'resolved': return 'Answered from the retrieved pages';
       case 'exhausted': return `No match${e.reason ? `: ${e.reason}` : ''}`;
       case 'search_failed': return `Search failed (${e.source})`;
       case 'pull_failed': return `Could not pull ${e.title}`;
       default: return e.step;
     }
   };
-  $: groups = events.filter((e) => !e.done).reduce((acc: { id: string; items: FetchEvent[] }[], e) => {
+  $: groups = events.filter((e) => !e.done).reduce((acc: { id: string; items: RetrievalEvent[] }[], e) => {
     const g = acc.find((x) => x.id === e.question);
     if (g) g.items.push(e);
     else acc.push({ id: e.question, items: [e] });
@@ -51,4 +51,4 @@
     {/each}
   </div>
 {/each}
-{#if working}<div class="hint">{events.length ? 'Searching.' : 'Sending stored questions.'}</div>{/if}
+{#if working}<div class="hint">{events.length ? 'Retrieving.' : 'Sending stored questions.'}</div>{/if}

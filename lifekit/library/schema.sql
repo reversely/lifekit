@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS volume (
     live_source TEXT,
     superseded_by TEXT,
     -- docs/content/deployments-and-approval.md 3.1: stock from a shelf list; staged by the
-    -- fetch pass, not yet added or removed; admitted; rejected (hidden from search).
+    -- online retrieval, not yet added or removed; admitted; rejected (hidden from search).
     admission TEXT NOT NULL DEFAULT 'stock' CHECK (admission IN ('stock', 'staged', 'admitted', 'rejected')),
     admitted_at TEXT,
     admitted_by TEXT
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS volume_tag (
     PRIMARY KEY (volume_id, tag)
 );
 
--- Stored questions and the digest the fetch pass writes (docs/content/library-schema.md 1.9).
+-- Stored questions and the digest the online retrieval writes (docs/content/library-schema.md 1.9).
 -- topic and wanted form the gap record (deployments-and-approval.md 2); origin says who
 -- asked: 'asked' for the reader, or the pull rule id that seeded it from the profile.
 CREATE TABLE IF NOT EXISTS question (

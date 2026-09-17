@@ -80,7 +80,7 @@
     </div>
   {:else if stored}
     <div class="group">Stored</div>
-    <div class="res"><p>{stored === 'offline' ? 'Offline. Stored until the network returns.' : 'No page answers this. Stored for the next search.'}</p><a class="open" href="#/digest">Open the digest</a></div>
+    <div class="res"><p>{stored === 'offline' ? 'Offline. Queued until the network returns.' : 'No page answers this. Queued for online retrieval.'}</p><a class="open" href="#/digest">Open the digest</a></div>
   {/if}
   <Chips {counts} {active} onFilter={(t) => (active = t)} />
   {#if vols.length}

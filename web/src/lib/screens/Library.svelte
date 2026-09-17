@@ -52,7 +52,7 @@
       <div></div>
       <div>
         <div class="t">How it works</div>
-        <div class="s">Five steps: ask, ask offline, search, curation, binder.</div>
+        <div class="s">Five steps: ask, ask offline, online retrieval, curation, binder.</div>
       </div>
       <div class="ic"><Icon name="help-circle" size={18} /></div>
     </a>

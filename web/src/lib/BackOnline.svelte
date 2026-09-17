@@ -1,13 +1,13 @@
 <script lang="ts">
   // The modal on the offline-to-online transition. When the online store goes from false to
-  // true, the modal measures the connection, sends the stored questions, and runs the fetch pass
+  // true, the modal measures the connection, sends the stored questions, and runs the online retrieval
   // with the trail in view. First load never opens the modal.
   import { onMount } from 'svelte';
   import type { Database } from './core/db';
   import { reload } from './core/db';
-  import { config as fetchConfig, flush, queued, syncStream, type FetchEvent } from './core/api';
+  import { config as fetchConfig, flush, queued, syncStream, type RetrievalEvent } from './core/api';
   import { online } from './core/net';
-  import FetchSteps from './FetchSteps.svelte';
+  import RetrievalSteps from './RetrievalSteps.svelte';
   export let db: Database | null = null;
 
   const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '';
@@ -19,8 +19,8 @@
   let netLine = '';
   let stored: { text: string; at: string }[] = [];
   let sendState: 'idle' | 'sending' | 'sent' = 'idle';
-  let fetchState: 'idle' | 'running' | 'done' | 'off' | 'nothing' = 'idle';
-  let events: FetchEvent[] = [];
+  let retrievalState: 'idle' | 'running' | 'done' | 'off' | 'nothing' = 'idle';
+  let events: RetrievalEvent[] = [];
   let closeButton: HTMLButtonElement | null = null;
 
   async function measure() {
@@ -49,7 +49,7 @@
     open = true;
     events = [];
     sendState = 'idle';
-    fetchState = 'idle';
+    retrievalState = 'idle';
     stored = queued();
     await measure();
     if (stored.length) {
@@ -61,17 +61,17 @@
       }
       sendState = 'sent';
     }
-    let fetchOn = true;
+    let retrievalOn = true;
     try {
-      fetchOn = (await fetchConfig()).fetch;
+      retrievalOn = (await fetchConfig()).online_retrieval;
     } catch {
-      fetchOn = true;
+      retrievalOn = true;
     }
-    if (!fetchOn) {
-      fetchState = 'off';
+    if (!retrievalOn) {
+      retrievalState = 'off';
       return;
     }
-    fetchState = 'running';
+    retrievalState = 'running';
     try {
       await syncStream((e) => (events = [...events, e]));
       await reload();
@@ -79,7 +79,7 @@
     } catch {
       /* the trail shows what arrived */
     }
-    fetchState = events.some((e) => !e.done) ? 'done' : 'nothing';
+    retrievalState = events.some((e) => !e.done) ? 'done' : 'nothing';
   }
 
   onMount(() => {
@@ -113,18 +113,18 @@
         <span class="line">{netLine}</span>
       </div>
       {#if stored.length}
-        <h3>Stored questions</h3>
+        <h3>Queue</h3>
         {#each stored as q}<p class="q">{q.text}</p>{/each}
         <p class="state">{sendState === 'sending' ? `Sending ${stored.length} question${stored.length === 1 ? '' : 's'}.` : sendState === 'sent' ? 'Sent.' : ''}</p>
       {/if}
-      <h3>Searches</h3>
-      {#if fetchState === 'off'}
-        <p class="state">Downloads are off.</p>
-      {:else if fetchState === 'nothing'}
+      <h3>Online retrieval</h3>
+      {#if retrievalState === 'off'}
+        <p class="state">Online retrieval is off.</p>
+      {:else if retrievalState === 'nothing'}
         <p class="state">Nothing to work.</p>
       {:else}
-        <FetchSteps {db} {events} working={fetchState === 'running'} />
-        {#if fetchState === 'done'}<p class="state">Done. <a class="inline" href="#/digest" on:click={close}>Open digest</a></p>{/if}
+        <RetrievalSteps {db} {events} working={retrievalState === 'running'} />
+        {#if retrievalState === 'done'}<p class="state">Done. <a class="inline" href="#/digest" on:click={close}>Open digest</a></p>{/if}
       {/if}
     </div>
   </div>
