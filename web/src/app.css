@@ -375,3 +375,21 @@ button.icon-only, .topbar .net, .rail .net, .mode, .bar .x { min-width: 36px; mi
 .screen.video .report .event { padding-left: 14px; border-left: 2px solid var(--line); }
 .screen.video .res.trail { margin: 0; }
 .screen.video .hint { margin: 0; font: var(--body); color: var(--ink2); }
+/* the camera capture, the recording pill, and the tour callouts on the video screen */
+.screen.video .capture { position: relative; }
+.screen.video .capture .over { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; color: #C9D3D9; }
+.screen.video .recording { position: absolute; top: 12px; left: 12px; display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; border-radius: 16px; background: #FFFFFF; color: #1B2A33; font: 500 14px/20px var(--sans); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+.screen.video .recording .dot { width: 10px; height: 10px; border-radius: 50%; background: #E5533D; }
+.screen.video .tour-open { margin-left: 8px; align-self: center; }
+.screen.video .step.fail { color: #C97A6A; }
+/* the tour surface takes the light token set with teal as the accent */
+.screen.video .callout { position: fixed; z-index: 30; background: #FFFFFF; color: #1B2A33; border-radius: 12px; padding: 16px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28); }
+.screen.video .callout-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.screen.video .callout-head .n { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: #1A9E8C; color: #FFFFFF; font: 500 16px/20px var(--sans); }
+.screen.video .callout-head h3 { margin: 0; font: var(--surface-title); color: #1B2A33; }
+.screen.video .callout p { margin: 0 0 12px; font: var(--list); color: #3A4A54; }
+.screen.video .callout-nav { display: flex; justify-content: flex-end; gap: 8px; }
+.screen.video .callout .chip { background: #F2F4F5; color: #1B2A33; border-color: #DFE5E9; }
+.screen.video .callout .chip.go { background: #1A9E8C; color: #FFFFFF; border-color: #1A9E8C; font-weight: 500; }
+[data-tour] { scroll-margin: 120px; }
+.screen.video .tour-on { outline: 2px solid #1A9E8C; outline-offset: 4px; border-radius: var(--r-control); }

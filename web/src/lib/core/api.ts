@@ -99,6 +99,7 @@ export interface Config {
   zim?: { file: string; articles: number } | null;
   sections?: { id: string; order: number; title: string; scope: string; gloss: string; icon: string }[];
   questions?: Record<string, string[]>;
+  video_tour?: TourStep[];
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
@@ -229,3 +230,15 @@ export async function videoStream(body: { clip: string; prompt: string; tracking
     }
   }
 }
+
+/** The tour rows of packs/video-tour.tsv: the control each step anchors to, its title, its text. */
+export interface TourStep { anchor: string; title: string; text: string }
+/** POST /api/vss/segment: one recorded camera segment as the body; returns its description. */
+export async function videoSegment(blob: Blob, q: { start: number; prompt: string; tracking: string }): Promise<{ start: number; end: number; text: string }> {
+  const params = new URLSearchParams({ start: String(q.start), prompt: q.prompt, tracking: q.tracking });
+  const r = await api(`/api/vss/segment?${params}`, { method: 'POST', headers: { 'Content-Type': blob.type || 'video/webm' }, body: blob });
+  if (!r.ok) throw new Error(`segment: ${r.status}`);
+  return r.json();
+}
+/** POST /api/vss/report: the report over the segments a camera run described. */
+export const videoReport = (body: { prompt: string; notes: { start: number; end: number; text: string }[] }) => post<{ text: string }>('/api/vss/report', body);

@@ -42,7 +42,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 TOKEN = os.environ.get("LIFEKIT_TOKEN", "")
 # Routes that change state or read private data need the box token when one is set.
-GUARDED = {("POST", "/api/vss/stream"), ("POST", "/api/verdict"), ("PUT", "/api/profile"), ("POST", "/api/questions"), ("POST", "/api/sync"),
+GUARDED = {("POST", "/api/vss/stream"), ("POST", "/api/vss/segment"), ("POST", "/api/vss/report"), ("POST", "/api/verdict"), ("PUT", "/api/profile"), ("POST", "/api/questions"), ("POST", "/api/sync"),
            ("GET", "/api/sync/stream"), ("GET", "/api/library.sqlite"), ("GET", "/library.sqlite"), ("GET", "/api/profile"),
            ("POST", "/api/chat"), ("POST", "/api/answer"), ("GET", "/api/digest"), ("GET", "/api/candidates"), ("GET", "/api/events")}
 
@@ -133,6 +133,17 @@ class VideoRequest(BaseModel):
     tracking: str = Field(default="", max_length=200)
 
 
+class VideoNote(BaseModel):
+    start: float = Field(ge=0, le=86400)
+    end: float = Field(ge=0, le=86400)
+    text: str = Field(max_length=4000)
+
+
+class VideoReport(BaseModel):
+    prompt: str = Field(max_length=2000)
+    notes: list[VideoNote] = Field(max_length=360)
+
+
 class Verdict(BaseModel):
     volume: str
     verdict: str
@@ -156,7 +167,12 @@ def api_config():
         questions: dict[str, list[str]] = {}
         for row in csv.DictReader(handle, delimiter="\t"):
             questions.setdefault(row["kind"], []).append(row["text"])
-    return {**provider.describe(), "zim": zim.describe(), "sections": sections.rows(), "questions": questions}
+    tour: list[dict] = []
+    tour_path = LOCAL_PACKS / "video-tour.tsv"
+    if tour_path.is_file():
+        with tour_path.open(newline="") as handle:
+            tour = [dict(row) for row in csv.DictReader(handle, delimiter="\t")]
+    return {**provider.describe(), "zim": zim.describe(), "sections": sections.rows(), "questions": questions, "video_tour": tour}
 
 
 @app.get("/api/search")
@@ -366,6 +382,34 @@ def api_vss_stream(body: VideoRequest):
     if not vss.valid_clip(body.clip):
         raise HTTPException(status_code=404)
     return StreamingResponse(vss.stream(body.clip, body.prompt, body.tracking), media_type="application/x-ndjson", headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
+
+
+@app.post("/api/vss/segment")
+async def api_vss_segment(request: Request, start: float = 0, prompt: str = "", tracking: str = ""):
+    """One recorded camera segment as the request body (video/webm or video/mp4, at most
+    20 MB), described by the vision model and deleted; returns {start, end, text}."""
+    from fastapi import HTTPException
+
+    kind = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    if kind not in vss.SEGMENT_TYPES:
+        raise HTTPException(status_code=415, detail="The segment must be video/webm or video/mp4.")
+    if len(prompt) > 2000 or len(tracking) > 200 or not (0 <= start <= 86400):
+        raise HTTPException(status_code=400)
+    data = await request.body()
+    if not data or len(data) > vss.SEGMENT_BYTES:
+        raise HTTPException(status_code=413, detail="A segment is at most 20 MB.")
+    try:
+        return vss.describe_segment(data, vss.SEGMENT_TYPES[kind], start, prompt, tracking)
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=422, detail=str(error)[:300]) from error
+
+
+@app.post("/api/vss/report")
+def api_vss_report(body: VideoReport):
+    """The report over the segments a camera run described: a title and summary from the
+    text model, then the headings and event lines built in code."""
+    notes = [(n.start, n.end, n.text) for n in body.notes]
+    return {"text": vss.report(body.prompt, notes) if notes else ""}
 
 
 @app.get("/vss/{name}")

@@ -55,11 +55,25 @@ def clips() -> list[dict]:
 
 
 def duration(path: Path) -> float:
+    """The length in seconds. A file the browser's recorder wrote carries no duration in its
+    header, so when ffprobe reports none the file is decoded to its end and the last time
+    stamp is read."""
     result = subprocess.run(
         ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
         capture_output=True, text=True, check=True, timeout=60,
     )
-    return float(result.stdout.strip() or 0)
+    text = result.stdout.strip()
+    if text and text != "N/A":
+        return float(text)
+    decoded = subprocess.run(
+        ["ffmpeg", "-v", "info", "-i", str(path), "-f", "null", "-"],
+        capture_output=True, text=True, check=False, timeout=120,
+    )
+    stamps = re.findall(r"time=(\d+):(\d+):(\d+(?:\.\d+)?)", decoded.stderr)
+    if not stamps:
+        return 0.0
+    h, m, sec = stamps[-1]
+    return int(h) * 3600 + int(m) * 60 + float(sec)
 
 
 def frames(path: Path, start: float, seconds: float, folder: Path) -> list[Path]:
@@ -160,6 +174,33 @@ def run(clip: str, prompt: str, tracking: str, emit: Emit) -> str:
     text = report(prompt, notes)
     emit({"step": "done", "text": text, "elapsed": round(time.monotonic() - started, 1)})
     return text
+
+
+SEGMENT_TYPES = {"video/webm": ".webm", "video/mp4": ".mp4"}
+SEGMENT_BYTES = 20_000_000
+
+
+def describe_segment(data: bytes, suffix: str, start: float, prompt: str, tracking: str) -> dict:
+    """One camera segment: the bytes are written under a random name in a temporary
+    folder, its frames are cut and described, and the folder is deleted before returning.
+    Nothing recorded stays on disk."""
+    with tempfile.TemporaryDirectory(prefix="lifekit-segment-") as temp:
+        path = Path(temp) / f"segment{suffix}"
+        path.write_bytes(data)
+        try:
+            length = duration(path)
+        except subprocess.CalledProcessError as error:
+            raise ValueError("The segment is not a readable video file.") from error
+        if length <= 0.5:
+            raise ValueError("The segment holds no readable video.")
+        folder = Path(temp) / "frames"
+        folder.mkdir()
+        images = frames(path, 0.0, length, folder)
+        end = start + length
+        text = describe_chunk(prompt, tracking, start, end, images)
+        if not text:
+            raise RuntimeError(f"The vision model returned no text for seconds {start:.0f} to {end:.0f}.")
+        return {"start": round(start, 1), "end": round(end, 1), "text": text}
 
 
 def stream(clip: str, prompt: str, tracking: str):
