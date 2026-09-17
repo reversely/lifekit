@@ -21,6 +21,7 @@ say('chat reply', chatMs, budgets.chatMs);
 const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
 for (const width of [390, 1440]) {
   const page = await browser.newPage();
+  await page.evaluateOnNewDocument((tok) => { try { if (tok) localStorage.setItem('lifekit.token', tok); localStorage.setItem('lifekit.welcomeDone', '1'); } catch {} }, TOKEN);
   await page.setViewport({ width, height: 900, isMobile: width < 900 });
   for (const [name, route, sel] of [['home', '#/', '.wordmark'], ['recent', '#/recent', '.card'], ['digest', '#/digest', '.screen'], ['chat', '#/chat', '.input-row input']]) {
     const t0 = performance.now();

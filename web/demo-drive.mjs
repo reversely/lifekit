@@ -12,7 +12,7 @@ page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const text = () => page.evaluate(() => document.body.innerText);
 const until = async (fn, tries = 120, ms = 2000) => { for (let i = 0; i < tries; i++) { if (await fn()) return true; await wait(ms); } return false; };
-const shot = (n) => page.screenshot({ path: `${outDir}/${stamp}_demo-${n}.png` });
+const shot = (n) => outDir && page.screenshot({ path: `${outDir}/${stamp}_demo-${n}.png` });
 const say = (name, ok, note = '') => console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${note ? '  (' + note + ')' : ''}`);
 const next = async () => { await page.evaluate(() => [...document.querySelectorAll('.station-nav button')].find((b) => b.textContent.trim() === 'Next').click()); await wait(800); };
 

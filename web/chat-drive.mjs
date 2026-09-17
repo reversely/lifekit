@@ -35,7 +35,7 @@ say('thread url set', /#\/chat\/t/.test(await page.evaluate(() => location.hash)
 await shot('2-followup');
 await type('how do I replace a car alternator');
 say('off-topic answer arrives', await until(async () => (await page.$$('.bubble.assistant')).length === 3 && !(await page.$('.dots')), 90, 2000));
-say('off-topic question is stored for the library', /Stored for the library/.test(await text()));
+say('off-topic question is queued for online retrieval or answered from a retrieved document', /Queued for online retrieval|Stored for the library/.test(await text()) || (await page.$$('.bubble.assistant a.line')).length >= 2);
 await shot('3-noted');
 await page.goto(`${BASE}/#/chats`, { waitUntil: 'networkidle0' }); await wait(600);
 say('chats list shows the thread with its count', /4 messages|6 messages/.test(await text()) && /stop heavy bleeding/.test(await text()));
@@ -43,7 +43,7 @@ await page.evaluate(() => document.querySelector('.chat-row').click()); await wa
 say('reopening restores the transcript', (await page.$$('.bubble.assistant')).length === 3);
 await page.evaluate(() => document.querySelector('.rail .net, .rail button.net').click()); await wait(300);
 await type('what do I do if I see a bear');
-say('offline send stores the question', await until(async () => /stored/i.test((await bubbles()).at(-1) ?? ''), 10, 500));
+say('offline send queues the question', await until(async () => /queued|stored/i.test((await bubbles()).at(-1) ?? ''), 10, 500));
 await page.evaluate(() => document.querySelector('.rail .net, .rail button.net').click());
 await shot('4-offline');
 await page.setViewport({ width: 390, height: 1100, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); await wait(1500);

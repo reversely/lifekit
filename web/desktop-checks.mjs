@@ -8,7 +8,7 @@ await page.setViewport({ width: 1440, height: 900 });
 const errors = []; page.on('pageerror', (e) => errors.push(String(e).slice(0, 160)));
 const out = []; const check = (n, ok, note='') => out.push(`${ok ? 'PASS' : 'FAIL'}  ${n}${note ? '  (' + note + ')' : ''}`);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-const staged = (await (await fetch(`${BASE}/api/candidates`)).json()).candidates[0];
+const staged = ((await (await fetch(`${BASE}/api/candidates`, { headers: { 'X-LifeKit-Token': process.env.TOKEN ?? '' } })).json()).candidates ?? [])[0];
 const target = staged ? staged.id : 'atp-4-02-11-2026';
 await page.goto(`${BASE}/#/volume/${target}?page=2`, { waitUntil: 'networkidle0' }); await page.waitForSelector('.pager', { timeout: 20000 }); await wait(500);
 const pageText = () => page.evaluate(() => document.querySelector('.pager span')?.textContent);
