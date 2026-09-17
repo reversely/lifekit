@@ -3,8 +3,8 @@
 ## Summary
 
 LifeKit answers questions by quoting sources it carries. This document defines how those
-sources are stored so that an answer can point at the page it came from, a reviewer can
-approve content one page at a time, and a user's own geography and needs can add sources
+sources are stored so that an answer can point at the page it came from, a reader can
+add or remove a downloaded document as a whole, and a user's own geography and needs can add sources
 without changing the app. The structure copies a library: a shelf holds volumes, a volume
 has pages, a page yields passages, and a dictionary entry on the shelf's index card cites
 passages and names the volumes behind it. A stock profile fills the twelve shelves with a
@@ -19,7 +19,7 @@ The vocabulary below is used throughout. Each term names one table.
 |---|---|
 | shelf | One of the twelve encyclopedia tiles. A shelf orders volumes and entries. |
 | volume | One source work: a document, a web page set, a figure collection, or a dataset. The unit that a pull fetches and a licence governs. |
-| page | One addressable unit of a volume: a PDF page, a web section, a dataset partition. The unit a reviewer audits. |
+| page | One addressable unit of a volume: a PDF page, a web section, a dataset partition. |
 | passage | One verbatim span of a page. The unit retrieval returns and a block cites. |
 | entry | One dictionary entry on a shelf: the authored card a reader opens, such as "Hypothermia" or "Bowline". |
 | block | One typed paragraph of an entry's authored copy. Every block cites at least one passage. |
@@ -108,9 +108,9 @@ One volume may sit on several shelves.
 
 ### 1.3 page
 
-One row per addressable unit of a volume. The page is the audit unit: a reviewer sees the
-page render, its extracted text, and every passage cut from it on one screen, and records one
-verdict for all of them.
+One row per addressable unit of a volume. One row per addressable unit of a volume: a PDF page or an HTML heading section. A reader
+adds or removes a whole downloaded document (docs/content/deployments-and-approval.md,
+section 3); no page is reviewed on its own.
 
 | Column | Type | Meaning |
 |---|---|---|
@@ -121,10 +121,6 @@ verdict for all of them.
 | text | text | Extracted text of the page. |
 | render | text | Pack-relative path of the page image, when one exists. |
 | figures | json | List of figure ids on the page. |
-| audit | text | `unaudited`, `approved`, `rejected`, `superseded`. |
-| audit_by | text | Reviewer identifier. |
-| audit_at | date | Date of the verdict. |
-| audit_note | text | Reviewer's note, free text. |
 
 ### 1.4 passage
 
@@ -179,7 +175,7 @@ them still resolves.
 |---|---|---|
 | id | text | `entry_id@N`, N counting from 1. |
 | entry_id | text | References entry. |
-| approval | text | `draft`, `audited`, `copy_reviewed`, `rag_tested`, `approved`, `retired`. The three review parts advance this value in order. |
+| approval | text | Retired with the entry model; see docs/content/concepts.md. |
 | reviewer | text | Who moved it to its current state. |
 | at | date | When. |
 | reason | text | Why this revision exists: a new edition cited, a copy fix, a rejected page. |
@@ -349,7 +345,7 @@ entities it was derived from.
 | Column | Type | Meaning |
 |---|---|---|
 | entity_id | text | A volume, page, passage, figure, revision, observation, or learned volume. |
-| activity | text | `fetch`, `segment`, `render`, `audit`, `author`, `review`, `extract`, `resolve`, `pull`. |
+| activity | text | `fetch`, `segment`, `render`, `pull`, `admit`, `refile`, `reject`. |
 | agent | text | A script with its version, a model with its name, or a reviewer. |
 | derived_from | json | Entity ids the activity read. |
 | at | datetime | When. |
@@ -371,11 +367,10 @@ These are rebuilt from section 1 and never edited by hand.
   `shelf_volume.role`: `primary` ranks first, then `reference` and `figures`, then `archive`.
   Retrieval filters passages whose scope matches the profile or location, ranks by combined
   score and authority, and returns passage, page, volume, role, and edition so an answer can
-  name the edition it quotes and label an archive passage as such. The reviewer's audit screen
+  name the edition it quotes and label an archive passage as such. The volume page
   and the reader's "show me the page" screen are the same view.
 - `credits.md`: rendered from volume and figure rows with `carry = carry`.
-- `coverage`: per shelf, the count of entries by the approval state of their latest revision, the count of pages by audit
-  state, and every topic code with no `universal` entry or passage. The approval process reads
+- `coverage`: per shelf, the count of entries by the approval state of their latest revision, and every topic code with no `universal` entry or passage. The approval process reads
   this to pick the next packet, and the build refuses a pack with a topic that has no universal
   answer.
 - `entry_sources`: the numbered source list at the foot of each card, derived from block_cites
@@ -432,7 +427,7 @@ volumes pulled for a trip, readings refreshed.
 | volume.licence | `all-rights-reserved` | A statement was read that reserves rights. carry must be `link`. |
 | volume.licence | `gated` | Access needs an agreement or account. carry must be `link`. |
 | scope_id | `universal` | The item applies everywhere. The column stores this as a value rather than as an absence. |
-| scope_id | `unassessed` | No one has decided applicability yet. Retrieval treats it as universal and the audit screen lists it. |
+| scope_id | `unassessed` | No one has decided applicability yet. Retrieval treats it as universal. |
 | page.render | null | The volume has no page image (HTML, dataset). The anchor still resolves. |
 | block_cites | no rows | Forbidden. The build fails. |
 
@@ -466,8 +461,7 @@ directory shape with `tier = learned`.
    heading section for HTML, with text and anchor.
 3. A segmenter cuts passages from each page by structure (numbered steps, warnings, table rows,
    captions) and assigns kind. Offsets are recorded and checked.
-4. A reviewer audits pages: the page render, its text, and its passages on one screen, one
-   verdict per page.
+4. A reader adds a downloaded document to the library or removes it, as a whole.
 5. An author writes an entry revision and its blocks, citing passages. The build refuses a
    block with no citation and a new citation to a passage on a rejected page.
 6. The three-part approval advances the revision's approval. Each approved revision adds its
