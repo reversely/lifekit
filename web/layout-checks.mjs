@@ -52,7 +52,7 @@ for (const theme of ['dark', 'light']) {
     for (const [name, route] of ROUTES) {
       try {
         await page.goto(`${BASE}/?w=${width}${route}`, { waitUntil: 'networkidle0', timeout: 60000 });
-        await page.waitForFunction(() => !document.body.innerText.includes('Opening the library'), { timeout: 60000 });
+        await page.waitForFunction(() => !document.body.innerText.includes('LifeKit is loading'), { timeout: 60000 });
         await wait(600);
       } catch (e) { report(`${theme} ${width} ${name}`, [`load: ${String(e).slice(0, 80)}`]); continue; }
       const m = await page.evaluate(measure);

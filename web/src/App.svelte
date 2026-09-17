@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { Database } from './lib/core/db';
-  import { database, reload } from './lib/core/db';
+  import { database, loading, reload } from './lib/core/db';
   import { volume } from './lib/core/queries';
   import { sectionTitle } from './lib/core/sections';
   import Welcome from './lib/screens/Welcome.svelte';
@@ -93,7 +93,7 @@
 <TopBar home={isHome} back={!isHome} {title} action={isHome ? null : action} paper={screen === 'library'} />
 <main class="main" class:paper={screen === 'library'} class:home={isHome}>
 {#if !db}
-  <div class="screen"><div class="hint">Opening the library.</div></div>
+  <div class="screen"><div class="hint">{$loading.total ? `LifeKit is loading: ${Math.round($loading.received / 1e6)} of ${Math.round($loading.total / 1e6)} MB.` : $loading.received ? `LifeKit is loading: ${Math.round($loading.received / 1e6)} MB so far.` : 'LifeKit is loading.'}</div></div>
 {:else if isHome}
   <Home />
 {:else if screen === 'library'}
