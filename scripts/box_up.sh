@@ -66,4 +66,5 @@ rm -f web/dist/library.sqlite  # the API serves the live database at /library.sq
 
 if [ "${1:-}" = "--no-serve" ]; then exit 0; fi
 step "serve on :$PORT"
-exec uv run uvicorn lifekit.api:app --host 0.0.0.0 --port "$PORT"
+# no access log: request paths carry question text, which stays out of the journal
+exec uv run uvicorn lifekit.api:app --host 0.0.0.0 --port "$PORT" --no-access-log

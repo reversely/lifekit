@@ -1,3 +1,8 @@
+---
+name: lifekit-retrieval
+description: What online retrieval does on a LifeKit box, where its event log and downloaded files are, and the commands an operator runs to start it, pause it, and read the last run.
+---
+
 # lifekit-retrieval: online retrieval for queued questions
 
 A question the library cannot answer waits in a queue. When the internet is reachable, the
