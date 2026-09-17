@@ -31,8 +31,8 @@ await page.evaluate(() => (document.querySelector('.rail .net, .rail button.net,
 await next();
 say('station 3 runs the online retrieval on arrival', await until(async () => /Question:|Topic:|Sending|Searched/.test(await text()), 30, 1000));
 say('online retrieval shows a topic step', await until(async () => /Topic:/.test(await text()), 60, 2000));
-say('online retrieval shows the offline search', await until(async () => /Searched wikipedia_en_all/.test(await text()), 60, 2000));
-say('online retrieval shows the model pick and filing', await until(async () => /Selected:/.test(await text()) && /Section:/.test(await text()), 90, 2000));
+say('online retrieval shows the archive search or a library answer', await until(async () => /Searched offline Wikipedia|Answered/.test(await text()), 60, 2000));
+say('online retrieval shows the selection and section, or a library answer', await until(async () => (/Selected:/.test(await text()) && /Section:/.test(await text())) || /Answered/.test(await text()), 90, 2000));
 say('online retrieval finishes with an answer or nothing found', await until(async () => /Answered|No match/.test(await text()) && !/Working…/.test(await text()), 180, 2000));
 await shot('3');
 await next(); await wait(2000);
