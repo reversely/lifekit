@@ -69,6 +69,5 @@
       <input bind:value={draft} placeholder="Ask a question" aria-label="Ask a question" on:keydown={(e) => e.key === 'Enter' && ask(draft)} />
       <button class="send" aria-label="Send" disabled={!draft.trim()} on:click={() => ask(draft)}><Icon name="arrow-up" /></button>
     </div>
-    <a class="source-row" href="#/library">Answers quote the library.</a>
   </div>
 </div>

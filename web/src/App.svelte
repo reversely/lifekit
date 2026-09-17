@@ -66,11 +66,11 @@
 
 {#key isHome + $theme}<Backdrop animated={isHome} light={$theme === 'light'} />{/key}
 <BackOnline {db} />
-{#if db}
+{#if db && !isHome}
   <Rail {db} {screen} sectionId={parts[1] ?? null} />
 {/if}
 <TopBar home={isHome} back={!isHome} {title} action={isHome ? null : action} paper={screen === 'library'} />
-<main class="main" class:paper={screen === 'library'}>
+<main class="main" class:paper={screen === 'library'} class:full={isHome}>
 {#if !db}
   <div class="screen"><div class="hint">Opening the library.</div></div>
 {:else if isHome}

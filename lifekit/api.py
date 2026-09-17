@@ -277,4 +277,15 @@ def api_thumb(volume_id: str):
 if WEB_DIST.is_dir():
     from starlette.staticfiles import StaticFiles
 
+    from starlette.middleware.base import BaseHTTPMiddleware
+
+    class _NoCacheHtml(BaseHTTPMiddleware):
+        # index.html carries the hashed asset names; a cached copy shows an old build.
+        async def dispatch(self, request, call_next):
+            response = await call_next(request)
+            if response.headers.get("content-type", "").startswith("text/html"):
+                response.headers["Cache-Control"] = "no-cache"
+            return response
+
+    app.add_middleware(_NoCacheHtml)
     app.mount("/", StaticFiles(directory=WEB_DIST, html=True), name="web")

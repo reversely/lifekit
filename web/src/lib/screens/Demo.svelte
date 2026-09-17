@@ -1,11 +1,11 @@
 <script lang="ts">
   // The demo route: five stations, each running the model or the loop for real, with one
   // paragraph stating what happens and why (docs/content/deployments-and-approval.md 4).
-  import { onDestroy, onMount } from 'svelte';
+  import { onMount } from 'svelte';
   import type { Database } from '../core/db';
   import { reload } from '../core/db';
   import { answer as askApi, candidates as fetchCandidates, config as fetchConfig, enqueue, flush, queued, syncStream, type AnswerResult, type Candidate, type LoopEvent } from '../core/api';
-  import { forceOffline, online } from '../core/net';
+  import { online } from '../core/net';
   import { sections } from '../core/sections';
   import LoopTrail from '../LoopTrail.svelte';
   import NetToggle from '../NetToggle.svelte';
@@ -87,7 +87,7 @@
 
   const stations = [
     { title: 'Ask', text: 'Answers quote a page on this device. Edit the question, press Ask.' },
-    { title: 'Ask offline', text: 'Offline. Press Ask; the browser stores the question until the network returns.' },
+    { title: 'Ask offline', text: 'Switch offline with the toggle, then press Ask. The browser stores the question until the network returns.' },
     { title: 'Search', text: 'Each stored question: topic, offline Wikipedia search, article choice, section, download, answer.' },
     { title: 'Curation', text: 'A new download shows its description and its section. Add it to the library, or remove it. A removed document is not pulled again.' },
     { title: 'The binder', text: 'An admitted document lists in the binder as a volume, with cover, licence, and page count, and the New download marker is removed.' },
@@ -98,7 +98,6 @@
   let lastStep = 0;
   function enter(n: number) {
     if (!loaded) return;
-    forceOffline.set(n === 2);
     if (n === 1 && !reply && !asking) ask1();
     if (n === 3 && !ran && !working) runLoop();
     if (n >= 4) findCandidate();
@@ -107,7 +106,6 @@
     lastStep = step;
     enter(step);
   }
-  onDestroy(() => forceOffline.set(false));
   const go = (n: number) => (location.hash = `#/demo/${Math.min(5, Math.max(1, n))}`);
   $: section = candidate?.section ?? sections(db)[0]?.id ?? '';
 </script>

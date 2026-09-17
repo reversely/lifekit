@@ -62,12 +62,12 @@
 <div class="screen">
   <div class="top"><h1>Search</h1></div>
   <div class="bar">
-    <input bind:value={query} bind:this={box} placeholder="Ask the library" aria-label="Ask the library" on:keydown={(e) => e.key === 'Enter' && ask()} />
+    <input bind:value={query} bind:this={box} placeholder="Question" aria-label="Question" on:keydown={(e) => e.key === 'Enter' && ask()} />
     {#if query}<button class="x" on:click={() => ((query = ''), (reply = null), (stored = null))}>×</button>{/if}
   </div>
   <div class="askrow">
     <button class="chip ask" on:click={ask} disabled={asking || !query.trim()}>{asking ? 'Asking' : 'Ask'}</button>
-    <NetToggle size={14} /><span class="hint inline">{$online ? 'Answers quote the pages below.' : 'Offline: questions are stored until the network returns.'}</span>
+    <NetToggle size={14} /><span class="hint inline">{$online ? '' : 'Offline: questions are stored until the network returns.'}</span>
   </div>
   {#if reply?.answered}
     <div class="group">Answer</div>

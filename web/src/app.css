@@ -325,3 +325,7 @@ h1, h2, h3 { font-weight: 500; }
 .modal .state { margin: 0; font: var(--list); color: var(--ink2); }
 .modal .state .inline { color: var(--ink); text-decoration: underline; }
 .modal .res.trail { margin: 0; }
+
+/* the home takes the full viewport: no rail beside the hero */
+.main.full { margin-left: 0; max-width: none; }
+.attribution a { color: var(--link); text-decoration: underline; }

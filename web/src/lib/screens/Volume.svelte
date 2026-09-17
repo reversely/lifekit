@@ -73,6 +73,12 @@
 
   $: v = volume(db, id);
   $: meta = volumeMeta(db, id);
+  // Creative Commons codes link to the deed; other codes show as text.
+  const licenceUrl = (code: string) => {
+    const m = /^CC-?(BY(?:-NC)?(?:-SA)?(?:-ND)?)-?(\d\.\d)$/i.exec(code);
+    return m ? `https://creativecommons.org/licenses/${m[1].toLowerCase()}/${m[2]}/` : '';
+  };
+  const licenceLabel = (code: string) => code.replace(/^CC-?/i, 'CC ').replace(/-(\d)/, ' $1').replace(/-/g, ' ');
   $: total = pageCount(db, id);
   let current = initialPage;
   $: current = initialPage;
@@ -131,10 +137,11 @@
           {#each v.tags.filter((t) => t.namespace !== 'section') as t}<span class="tag" class:hand={t.source === 'hand'}>{t.value}</span>{/each}
         </div>
         <div class="meta">
-          <div>{total} pages, {v.licence}</div>
-          <div>Retrieved {(meta?.retrieved ?? '').slice(0, 10)}, sha256 {(meta?.sha256 ?? '').slice(0, 12)}</div>
-          {#if meta?.history}<div><a class="history" href={meta.history} target="_blank" rel="noreferrer">Authors are listed in the page history.</a></div>{/if}
-          <a class="open" href={meta?.url} target="_blank" rel="noreferrer">Open the original</a>
+          <div>{total} pages</div>
+          <div class="attribution">
+            <a href={meta?.url} target="_blank" rel="noreferrer">{v.publisher || 'Source'}</a>{#if meta?.history}, <a href={meta.history} target="_blank" rel="noreferrer">Authors</a>{/if}{#if v.licence}, {#if licenceUrl(v.licence)}<a href={licenceUrl(v.licence)} target="_blank" rel="noreferrer">{licenceLabel(v.licence)}</a>{:else}{v.licence}{/if}{/if}
+          </div>
+          <div>Retrieved {(meta?.retrieved ?? '').slice(0, 10)}</div>
         </div>
       </div>
     </div>
