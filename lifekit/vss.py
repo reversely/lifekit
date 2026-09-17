@@ -3,8 +3,8 @@ to a vision model with the summarization prompt, and the chunk descriptions are 
 one report by the text model.
 
 The vision model is any OpenAI-compatible chat server that accepts images, set by
-LIFEKIT_VISION_URL and LIFEKIT_VISION_MODEL (default: Qwen2.5-VL 7B through Ollama on the box, which answers without a thinking pass;
-Cosmos Reason2 8B through vLLM takes the same call). Clips live in packs/vss-demo and every
+LIFEKIT_VISION_URL and LIFEKIT_VISION_MODEL (default: Cosmos Reason2 8B served by vLLM on the box
+at port 8010, scripts/cosmos_up.sh; any server that takes images on the chat route works). Clips live in packs/vss-demo and every
 clip is named by a manifest row.
 """
 
@@ -34,8 +34,8 @@ Emit = Callable[[dict], None]
 
 def vision_endpoint() -> tuple[str, str]:
     return (
-        os.environ.get("LIFEKIT_VISION_URL", "http://localhost:11434/v1").rstrip("/"),
-        os.environ.get("LIFEKIT_VISION_MODEL", "qwen2.5vl:7b"),
+        os.environ.get("LIFEKIT_VISION_URL", "http://127.0.0.1:8010/v1").rstrip("/"),
+        os.environ.get("LIFEKIT_VISION_MODEL", "cosmos-reason2-8b"),
     )
 
 
@@ -95,7 +95,12 @@ def describe_chunk(prompt: str, tracking: str, start: float, end: float, images:
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
 
-_EVENT = re.compile(r"^\s*-?\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*:\s*(.+)$")
+_EVENT = re.compile(r"^\s*-?\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*[:\s]\s*(.+)$")
+
+
+def seconds(text: str) -> str:
+    """A time stamp as the model wrote it, without trailing zeros: 50.000 becomes 50."""
+    return f"{float(text):g}"
 
 
 def stamp(seconds: float) -> str:
@@ -123,7 +128,7 @@ def report(prompt: str, notes: list[tuple[float, float, str]]) -> str:
                 continue
             match = _EVENT.match(raw)
             if match:
-                out.append(f"- {match.group(1)}-{match.group(2)}: {match.group(3).strip()}")
+                out.append(f"- {seconds(match.group(1))}-{seconds(match.group(2))}: {match.group(3).strip()}")
             else:
                 out.append(f"- {s:.0f}-{e:.0f}: {raw.lstrip('-* ')}")
         out.append("")

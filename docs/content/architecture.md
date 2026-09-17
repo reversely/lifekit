@@ -10,8 +10,11 @@ structural change; do not edit by hand.
 graph LR
   lifekit_api["api"]
   lifekit_api --> lifekit_library_build
+  lifekit_api --> lifekit_library_chat
   lifekit_api --> lifekit_library_covers
   lifekit_api --> lifekit_library_query
+  lifekit_api --> lifekit_library_render
+  lifekit_api --> lifekit_packs
   lifekit_library_architecture["library.architecture"]
   lifekit_library_build["library.build"]
   lifekit_library_build --> lifekit_library_fetch
@@ -21,13 +24,21 @@ graph LR
   lifekit_library_build --> lifekit_library_verdicts
   lifekit_library_build --> lifekit_packs
   lifekit_library_build --> lifekit_reference
+  lifekit_library_chat["library.chat"]
+  lifekit_library_chat --> lifekit_library_online_retrieval
+  lifekit_library_chat --> lifekit_library_query
   lifekit_library_covers["library.covers"]
   lifekit_library_covers --> lifekit_library_build
   lifekit_library_covers --> lifekit_library_fetch
   lifekit_library_covers --> lifekit_library_query
   lifekit_library_fetch["library.fetch"]
   lifekit_library_fetch --> lifekit_packs
-  lifekit_library_online_retrieval["library.online retrieval"]
+  lifekit_library_filing_test["library.filing_test"]
+  lifekit_library_filing_test --> lifekit_library_online_retrieval
+  lifekit_library_filing_test --> lifekit_library_verdicts
+  lifekit_library_injection_test["library.injection_test"]
+  lifekit_library_injection_test --> lifekit_library_chat
+  lifekit_library_online_retrieval["library.online_retrieval"]
   lifekit_library_online_retrieval --> lifekit_library_build
   lifekit_library_online_retrieval --> lifekit_library_covers
   lifekit_library_online_retrieval --> lifekit_library_fetch
@@ -48,6 +59,9 @@ graph LR
   lifekit_library_render --> lifekit_library_build
   lifekit_library_render --> lifekit_library_fetch
   lifekit_library_render --> lifekit_library_query
+  lifekit_library_render --> lifekit_packs
+  lifekit_library_sections["library.sections"]
+  lifekit_library_sections --> lifekit_packs
   lifekit_library_segment["library.segment"]
   lifekit_library_tags["library.tags"]
   lifekit_library_tags --> lifekit_library_build
@@ -56,8 +70,12 @@ graph LR
   lifekit_library_verdicts --> lifekit_library_fetch
   lifekit_library_verdicts --> lifekit_library_tags
   lifekit_library_verdicts --> lifekit_packs
+  lifekit_library_zim["library.zim"]
+  lifekit_library_zim --> lifekit_packs
   lifekit_packs["packs"]
   lifekit_reference["reference"]
+  lifekit_vss["vss"]
+  lifekit_vss --> lifekit_packs
 ```
 
 ## Web app: screens over the shared core
@@ -65,34 +83,114 @@ graph LR
 ```mermaid
 graph LR
   App_svelte["App.svelte"]
+  App_svelte --> lib_BackOnline_svelte
+  App_svelte --> lib_Rail_svelte
+  App_svelte --> lib_SceneHost_svelte
+  App_svelte --> lib_TopBar_svelte
   App_svelte --> lib_core_api_ts
   App_svelte --> lib_core_db_ts
-  App_svelte --> lib_core_net_ts
+  App_svelte --> lib_core_queries_ts
+  App_svelte --> lib_core_sections_ts
+  App_svelte --> lib_core_theme_ts
+  App_svelte --> lib_screens_Chat_svelte
+  App_svelte --> lib_screens_Chats_svelte
+  App_svelte --> lib_screens_Demo_svelte
   App_svelte --> lib_screens_Digest_svelte
+  App_svelte --> lib_screens_Home_svelte
   App_svelte --> lib_screens_Library_svelte
   App_svelte --> lib_screens_Profile_svelte
   App_svelte --> lib_screens_Recent_svelte
   App_svelte --> lib_screens_Search_svelte
   App_svelte --> lib_screens_Section_svelte
+  App_svelte --> lib_screens_Video_svelte
   App_svelte --> lib_screens_Volume_svelte
   App_svelte --> lib_screens_Welcome_svelte
+  lib_BackOnline_svelte["lib/BackOnline.svelte"]
+  lib_BackOnline_svelte --> lib_RetrievalSteps_svelte
+  lib_BackOnline_svelte --> lib_core_api_ts
+  lib_BackOnline_svelte --> lib_core_db_ts
+  lib_BackOnline_svelte --> lib_core_net_ts
+  lib_Backdrop_svelte["lib/Backdrop.svelte"]
   lib_Card_svelte["lib/Card.svelte"]
+  lib_Card_svelte --> lib_Thumb_svelte
   lib_Card_svelte --> lib_core_types_ts
+  lib_ChatMessage_svelte["lib/ChatMessage.svelte"]
+  lib_ChatMessage_svelte --> lib_Icon_svelte
+  lib_ChatMessage_svelte --> lib_core_chat_ts
   lib_Chips_svelte["lib/Chips.svelte"]
   lib_Chips_svelte --> lib_core_types_ts
+  lib_Icon_svelte["lib/Icon.svelte"]
+  lib_NetToggle_svelte["lib/NetToggle.svelte"]
+  lib_NetToggle_svelte --> lib_Icon_svelte
+  lib_NetToggle_svelte --> lib_core_net_ts
   lib_ProfileSteps_svelte["lib/ProfileSteps.svelte"]
   lib_ProfileSteps_svelte --> lib_core_api_ts
+  lib_Rail_svelte["lib/Rail.svelte"]
+  lib_Rail_svelte --> lib_NetToggle_svelte
+  lib_Rail_svelte --> lib_ThemeToggle_svelte
+  lib_Rail_svelte --> lib_core_api_ts
+  lib_Rail_svelte --> lib_core_db_ts
+  lib_Rail_svelte --> lib_core_queries_ts
+  lib_RetrievalSteps_svelte["lib/RetrievalSteps.svelte"]
+  lib_RetrievalSteps_svelte --> lib_core_api_ts
+  lib_RetrievalSteps_svelte --> lib_core_db_ts
+  lib_RetrievalSteps_svelte --> lib_core_sections_ts
+  lib_Scene_svelte["lib/Scene.svelte"]
+  lib_SceneHost_svelte["lib/SceneHost.svelte"]
+  lib_SceneHost_svelte --> lib_Backdrop_svelte
+  lib_ThemeToggle_svelte["lib/ThemeToggle.svelte"]
+  lib_ThemeToggle_svelte --> lib_Icon_svelte
+  lib_ThemeToggle_svelte --> lib_core_theme_ts
+  lib_Thumb_svelte["lib/Thumb.svelte"]
+  lib_TopBar_svelte["lib/TopBar.svelte"]
+  lib_TopBar_svelte --> lib_Icon_svelte
+  lib_TopBar_svelte --> lib_NetToggle_svelte
+  lib_TopBar_svelte --> lib_ThemeToggle_svelte
   lib_core_api_ts["lib/core/api.ts"]
+  lib_core_chat_ts["lib/core/chat.ts"]
+  lib_core_chat_ts --> lib_core_api_ts
   lib_core_db_ts["lib/core/db.ts"]
+  lib_core_db_ts --> lib_core_api_ts
   lib_core_net_ts["lib/core/net.ts"]
   lib_core_queries_ts["lib/core/queries.ts"]
   lib_core_queries_ts --> lib_core_db_ts
+  lib_core_queries_ts --> lib_core_sections_ts
   lib_core_queries_ts --> lib_core_types_ts
+  lib_core_sections_ts["lib/core/sections.ts"]
+  lib_core_sections_ts --> lib_core_db_ts
+  lib_core_theme_ts["lib/core/theme.ts"]
   lib_core_types_ts["lib/core/types.ts"]
+  lib_screens_Chat_svelte["lib/screens/Chat.svelte"]
+  lib_screens_Chat_svelte --> lib_ChatMessage_svelte
+  lib_screens_Chat_svelte --> lib_Icon_svelte
+  lib_screens_Chat_svelte --> lib_core_chat_ts
+  lib_screens_Chat_svelte --> lib_core_net_ts
+  lib_screens_Chats_svelte["lib/screens/Chats.svelte"]
+  lib_screens_Chats_svelte --> lib_Icon_svelte
+  lib_screens_Chats_svelte --> lib_core_chat_ts
+  lib_screens_Demo_svelte["lib/screens/Demo.svelte"]
+  lib_screens_Demo_svelte --> lib_NetToggle_svelte
+  lib_screens_Demo_svelte --> lib_RetrievalSteps_svelte
+  lib_screens_Demo_svelte --> lib_core_api_ts
+  lib_screens_Demo_svelte --> lib_core_db_ts
+  lib_screens_Demo_svelte --> lib_core_net_ts
+  lib_screens_Demo_svelte --> lib_core_sections_ts
+  lib_screens_Demo_svelte --> lib_screens_Section_svelte
+  lib_screens_Demo_svelte --> lib_screens_Volume_svelte
   lib_screens_Digest_svelte["lib/screens/Digest.svelte"]
+  lib_screens_Digest_svelte --> lib_NetToggle_svelte
+  lib_screens_Digest_svelte --> lib_RetrievalSteps_svelte
   lib_screens_Digest_svelte --> lib_core_api_ts
+  lib_screens_Digest_svelte --> lib_core_db_ts
   lib_screens_Digest_svelte --> lib_core_net_ts
+  lib_screens_Digest_svelte --> lib_core_sections_ts
+  lib_screens_Home_svelte["lib/screens/Home.svelte"]
+  lib_screens_Home_svelte --> lib_Icon_svelte
+  lib_screens_Home_svelte --> lib_core_api_ts
+  lib_screens_Home_svelte --> lib_core_chat_ts
+  lib_screens_Home_svelte --> lib_core_net_ts
   lib_screens_Library_svelte["lib/screens/Library.svelte"]
+  lib_screens_Library_svelte --> lib_Icon_svelte
   lib_screens_Library_svelte --> lib_core_api_ts
   lib_screens_Library_svelte --> lib_core_db_ts
   lib_screens_Library_svelte --> lib_core_queries_ts
@@ -107,6 +205,7 @@ graph LR
   lib_screens_Recent_svelte --> lib_core_types_ts
   lib_screens_Search_svelte["lib/screens/Search.svelte"]
   lib_screens_Search_svelte --> lib_Chips_svelte
+  lib_screens_Search_svelte --> lib_NetToggle_svelte
   lib_screens_Search_svelte --> lib_core_api_ts
   lib_screens_Search_svelte --> lib_core_db_ts
   lib_screens_Search_svelte --> lib_core_net_ts
@@ -116,12 +215,16 @@ graph LR
   lib_screens_Section_svelte --> lib_Chips_svelte
   lib_screens_Section_svelte --> lib_core_db_ts
   lib_screens_Section_svelte --> lib_core_queries_ts
+  lib_screens_Section_svelte --> lib_core_sections_ts
   lib_screens_Section_svelte --> lib_core_types_ts
+  lib_screens_Video_svelte["lib/screens/Video.svelte"]
+  lib_screens_Video_svelte --> lib_core_api_ts
   lib_screens_Volume_svelte["lib/screens/Volume.svelte"]
+  lib_screens_Volume_svelte --> lib_Thumb_svelte
   lib_screens_Volume_svelte --> lib_core_api_ts
   lib_screens_Volume_svelte --> lib_core_db_ts
   lib_screens_Volume_svelte --> lib_core_queries_ts
-  lib_screens_Volume_svelte --> lib_core_types_ts
+  lib_screens_Volume_svelte --> lib_core_sections_ts
   lib_screens_Welcome_svelte["lib/screens/Welcome.svelte"]
   lib_screens_Welcome_svelte --> lib_ProfileSteps_svelte
   lib_screens_Welcome_svelte --> lib_core_api_ts
@@ -137,12 +240,19 @@ graph LR
 - `POST /api/answer`
 - `POST /api/questions`
 - `POST /api/sync`
+- `POST /api/chat`
 - `GET /api/profile`
 - `GET /api/candidates`
 - `POST /api/verdict`
+- `GET /api/sync/stream`
+- `GET /api/events`
 - `GET /api/digest`
 - `GET /api/library.sqlite`
 - `GET /library.sqlite`
+- `GET /api/vss/clips`
+- `POST /api/vss/stream`
+- `GET /vss/{name}`
+- `GET /thumbs/{volume_id}.png`
 
 ## Tables (packs/library.sqlite)
 
@@ -155,6 +265,7 @@ graph LR
 - `provenance`
 - `question`
 - `rag_test`
+- `retrieval_event`
 - `shelf`
 - `shelf_volume`
 - `volume`

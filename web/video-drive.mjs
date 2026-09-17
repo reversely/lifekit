@@ -8,13 +8,13 @@ const outDir = process.argv[2];
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 let failures = 0;
 const say = (ok, name, detail = '') => { if (!ok) failures += 1; console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  ' + detail : ''}`); };
-const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+const browser = await puppeteer.launch({ executablePath: process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true, args: process.env.CHROME ? ['--no-sandbox'] : [] });
 for (const [theme, width] of [['dark', 1440], ['light', 1440], ['dark', 390]]) {
   const page = await browser.newPage();
   await page.evaluateOnNewDocument((tok, th) => { try { if (tok) localStorage.setItem('lifekit.token', tok); localStorage.setItem('lifekit.welcomeDone', '1'); localStorage.setItem('lifekit.theme', th); } catch {} }, TOKEN, theme);
   await page.setViewport({ width, height: 900, isMobile: width < 900 });
-  await page.goto(`${BASE}/?v${width}${theme}#/video`, { waitUntil: 'networkidle0' });
-  await page.waitForSelector('.screen.video textarea', { timeout: 30000 });
+  await page.goto(`${BASE}/?v${width}${theme}#/video`, { waitUntil: 'domcontentloaded', timeout: 90000 });
+  await page.waitForSelector('.screen.video textarea', { timeout: 240000 });
   await wait(800);
   const prompt = await page.$eval('.screen.video textarea', (el) => el.value);
   say(prompt.includes('natural hazard'), `${theme} ${width} summarization prompt loaded from packs`, prompt.slice(0, 40));

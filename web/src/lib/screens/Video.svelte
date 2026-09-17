@@ -8,6 +8,7 @@
   let clipList: Clip[] = [];
   let clip = '';
   let model = '';
+  let textModel = '';
   let defaults = { prompt: '', tracking: '' };
   let prompt = '';
   let tracking = '';
@@ -23,6 +24,7 @@
   onMount(async () => {
     try {
       const c = await fetchConfig();
+      textModel = c.small;
       defaults = { prompt: c.questions?.vss_summary?.[0] ?? '', tracking: c.questions?.vss_tracking?.[0] ?? '' };
       prompt = defaults.prompt;
       tracking = defaults.tracking;
@@ -75,7 +77,13 @@
   $: total = clipList.find((c) => c.name === clip)?.seconds ?? 0;
   $: chunksDone = events.filter((e) => e.step === 'chunk').length;
   $: secondsRead = Math.min(total, events.filter((e) => e.step === 'chunk').reduce((m, e) => Math.max(m, e.end ?? 0), 0));
-  $: stage = !events.length ? 'Starting' : events[events.length - 1].step === 'report' ? 'Writing the report' : events[events.length - 1].step === 'frames' ? 'Describing frames' : 'Cutting frames';
+  // The progress sentence names the program at work: ffmpeg cuts frames, the vision model
+  // describes them, the text model writes the report.
+  $: last = events[events.length - 1];
+  $: stage = !last ? 'The run is starting.'
+    : last.step === 'report' ? `${textModel || 'The text model'} is writing the report.`
+    : last.step === 'frames' ? `${model} is describing ${stamp(last.start ?? 0)} to ${stamp(last.end ?? 0)}.`
+    : 'ffmpeg is cutting frames.';
   const stamp = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
   // The report is plain text: the first line is the title, "## " lines are time-range
@@ -103,7 +111,7 @@
           <video class="player" src={`/vss/${clip}`} controls preload="metadata"></video>
         {/key}
       {:else}
-        <p class="hint">No clip is on this instance. A clip is an .mp4 file in packs/vss-demo with a manifest row.</p>
+        <p class="hint">No clip is in packs/vss-demo. A clip is an .mp4 file there with a manifest row.</p>
       {/if}
     </section>
 
@@ -123,11 +131,11 @@
     </div>
   {:else}
     <section class="panel output">
-      <h2>Output</h2>
+      <h2>Report</h2>
       {#if working}
         <div class="progress">
           <div class="bar"><div class="fill" style={`width:${total ? Math.round((secondsRead / total) * 100) : 0}%`}></div></div>
-          <p>{stage}. {stamp(secondsRead)} of {stamp(total)} read, {chunksDone} chunk{chunksDone === 1 ? '' : 's'} described, {elapsed} s elapsed.</p>
+          <p>{stage} {stamp(secondsRead)} of {stamp(total)} is described after {elapsed} s.</p>
         </div>
       {/if}
       {#if failure}
@@ -142,21 +150,21 @@
             {:else}<p>{line}</p>{/if}
           {/each}
         </article>
-        <p class="meta">Read by {model}, {events[events.length - 1]?.elapsed ?? elapsed} s.</p>
+        <p class="meta">{model} described the clip in {events[events.length - 1]?.elapsed ?? elapsed} s.</p>
       {:else if events.length}
         <div class="res trail">
           {#each events as e}
             {#if e.step === 'chunk'}
-              <div class="step done">{stamp(e.start ?? 0)} to {stamp(e.end ?? 0)}: {e.text}</div>
+              <div class="step done">{e.text}</div>
             {:else if e.step === 'frames'}
-              <div class="step">{stamp(e.start ?? 0)} to {stamp(e.end ?? 0)}: {e.count} frames cut</div>
+              <div class="step">ffmpeg cut {e.count} frames for {stamp(e.start ?? 0)} to {stamp(e.end ?? 0)}.</div>
             {:else if e.step === 'report'}
-              <div class="step">Writing the report</div>
+              <div class="step">{textModel || 'The text model'} is writing the report.</div>
             {/if}
           {/each}
         </div>
       {:else if !working}
-        <p class="hint">Launch a run from the Input tab. Each ten seconds of the clip is described, then the descriptions are joined into one report.</p>
+        <p class="hint">Launch a run from the Input tab. The vision model describes each ten seconds of the clip, and the text model writes the title and summary of the report.</p>
       {/if}
     </section>
   {/if}

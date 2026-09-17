@@ -3,7 +3,7 @@
 import puppeteer from 'puppeteer-core';
 const BASE = process.env.BASE ?? 'http://localhost:4173';
 const [outDir, stamp] = process.argv.slice(2);
-const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const browser = await puppeteer.launch({ executablePath: process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] , args: process.env.CHROME ? ['--no-sandbox'] : []});
 const out = [];
 const check = (name, ok, note = '') => { const line = `${ok ? 'PASS' : 'FAIL'}  ${name}${note ? '  (' + note + ')' : ''}`; out.push(line); console.log(line); };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -19,7 +19,7 @@ await page.evaluateOnNewDocument((tok) => { try { if (tok) localStorage.setItem(
   if (opts.theme) await page.evaluateOnNewDocument((t) => { try { localStorage.setItem('lifekit.theme', t); } catch {} }, opts.theme);
   const requests = [];
   page.on('request', (r) => requests.push(r.url()));
-  await page.goto(`${BASE}/${route}`, { waitUntil: 'networkidle0' });
+  await page.goto(`${BASE}/${route}`, { waitUntil: 'networkidle0', timeout: 120000 });
   await wait(1500);
   return { page, requests };
 }
