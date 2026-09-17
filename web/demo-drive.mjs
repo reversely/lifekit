@@ -26,11 +26,11 @@ await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => b
 say('station 2 stores the question', /stored/i.test(await text()));
 await shot('2');
 await next();
-say('station 3 runs the loop on arrival', await until(async () => /Question:|Topic:|Sending|Searched/.test(await text()), 30, 1000));
-say('loop shows a topic step', await until(async () => /Topic:/.test(await text()), 60, 2000));
-say('loop shows the offline search', await until(async () => /Searched wikipedia_en_all/.test(await text()), 60, 2000));
-say('loop shows the model pick and filing', await until(async () => /Selected:/.test(await text()) && /Section:/.test(await text()), 90, 2000));
-say('loop finishes with an answer or nothing found', await until(async () => /Answered|No match/.test(await text()) && !/Working…/.test(await text()), 180, 2000));
+say('station 3 runs the fetch pass on arrival', await until(async () => /Question:|Topic:|Sending|Searched/.test(await text()), 30, 1000));
+say('fetch pass shows a topic step', await until(async () => /Topic:/.test(await text()), 60, 2000));
+say('fetch pass shows the offline search', await until(async () => /Searched wikipedia_en_all/.test(await text()), 60, 2000));
+say('fetch pass shows the model pick and filing', await until(async () => /Selected:/.test(await text()) && /Section:/.test(await text()), 90, 2000));
+say('fetch pass finishes with an answer or nothing found', await until(async () => /Answered|No match/.test(await text()) && !/Working…/.test(await text()), 180, 2000));
 await shot('3');
 await next(); await wait(2000);
 say('station 4 shows a packet', await until(async () => /New download/i.test(await text()), 20, 1000));

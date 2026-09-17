@@ -53,14 +53,14 @@ check('offline ask is stored in the browser', queuedOne, await page.evaluate(() 
 check('offline ask shows the stored message', /stored/i.test(await text()));
 await shot('2-offline-stored');
 
-// 5. the transition back online opens the modal, sends the question, runs the loop
+// 5. the transition back online opens the modal, sends the question, runs the fetch pass
 await (await page.$('.rail button.net, .rail .net')).click();
 check('rail shows Online after switching back', await until(async () => /Online/.test(await text()), 10, 300));
 check('modal opens on the transition', await until(async () => !!(await page.$('.modal')), 20, 500));
 check('modal shows a round-trip line', await until(async () => /Round trip \d+ ms/.test(await text()), 20, 500));
 check('modal lists the stored question', /splint a broken wrist/.test(await text()));
 check('modal sends the stored question', await until(async () => /Sent\./.test(await text()), 30, 1000));
-check('modal trail runs the loop', await until(async () => /Topic:|Searched|Downloads are off|Nothing to work/.test(await text()), 60, 2000));
+check('modal trail runs the fetch pass', await until(async () => /Topic:|Searched|Downloads are off|Nothing to work/.test(await text()), 60, 2000));
 check('modal reaches Done', await until(async () => /Done\.|Downloads are off|Nothing to work/.test(await text()), 180, 2000));
 await shot('3-back-online');
 await clickText('.modal button', 'Close'); await wait(300);
@@ -68,7 +68,7 @@ check('Close dismisses the modal', !(await page.$('.modal')));
 const digest = await api('/api/digest');
 const cand = digest.candidates.find((c) => c.question && /splint/.test(c.question.text));
 const answeredSplint = digest.answered.find((a) => /splint/.test(a.question));
-check('the loop worked the stored question: a new download or an answer from admitted volumes', !!cand || (answeredSplint && answeredSplint.state === 'resolved'), cand ? cand.id : answeredSplint ? `${answeredSplint.state} from ${answeredSplint.volumes.join(', ')}` : JSON.stringify(digest.pending).slice(0, 100));
+check('the fetch pass worked the stored question: a new download or an answer from admitted volumes', !!cand || (answeredSplint && answeredSplint.state === 'resolved'), cand ? cand.id : answeredSplint ? `${answeredSplint.state} from ${answeredSplint.volumes.join(', ')}` : JSON.stringify(digest.pending).slice(0, 100));
 await go('#/digest', '.screen');
 check('digest shows new downloads or the answer', await until(async () => /New downloads|Answered/i.test(await text()), 20, 500));
 await shot('3b-digest');
@@ -138,7 +138,7 @@ const afterQ = (await api('/api/digest')).pending.length;
 check('profile change seeds a question when a rule matches', toggled && afterQ >= beforeQ, `${beforeQ} -> ${afterQ}`);
 await clickText('button', 'Boating'); await wait(500); // restore
 
-// 12. welcome routing does not loop for a set profile
+// 12. welcome routing does not fetch pass for a set profile
 await go('#/', '.wordmark');
 check('a set profile does not route to Welcome', !/#\/welcome/.test(await page.evaluate(() => location.hash)));
 

@@ -5,7 +5,7 @@ functions mount beside Gradio.
 
 Endpoints
   GET  /api/health
-  GET  /api/config                     model endpoints and whether the loop runs
+  GET  /api/config                     model endpoints and whether the fetch pass runs
   GET  /api/search?q=&tag=            passages and matching volumes from the library
   POST /api/answer  {question, tag}   model answer that quotes passages, or a stored question
   POST /api/chat    {question, history}  a conversation turn in the library's voice, with sources
@@ -15,7 +15,7 @@ Endpoints
   GET  /api/digest                     what arrived and what got answered, newest first
   GET  /api/library.sqlite             the current database, for the app to (re)load
   GET  /api/profile                    the household profile and the onboarding questions
-  PUT  /api/profile {answers}          save answers; pull rules seed questions for the loop
+  PUT  /api/profile {answers}          save answers; pull rules seed questions for the fetch pass
   GET  /api/candidates                 staged additions awaiting a verdict
   POST /api/verdict {volume, verdict, section?}   admit, refile, or reject one addition
 """
@@ -28,7 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from lifekit.library import chat as chats, loop, profile as profiles, provider, verdicts
+from lifekit.library import chat as chats, fetchpass, profile as profiles, provider, verdicts
 from lifekit.library.build import DB_PATH, connect
 from lifekit.packs import LOCAL_PACKS
 from lifekit.library.query import search, volumes_matching
@@ -39,7 +39,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 def db():
     connection = connect(DB_PATH)
-    loop.ensure_tables(connection)
+    fetchpass.ensure_tables(connection)
     return connection
 
 
@@ -130,25 +130,25 @@ def api_answer(body: Question):
 
     text, hits = _answer(connection, body.question, body.tag)
     if not hits or not covered(text):
-        topic, wanted = loop.gap_record(_ask, body.question) if provider.loop_enabled() else (None, None)
-        qid = loop.store_question(connection, body.question, profiles.get(connection), topic=topic, wanted=wanted)
+        topic, wanted = fetchpass.gap_record(_ask, body.question) if provider.fetch_enabled() else (None, None)
+        qid = fetchpass.store_question(connection, body.question, profiles.get(connection), topic=topic, wanted=wanted)
         return {"answered": False, "stored": qid, "hits": hits, "note": strip_verdict(text), "topic": topic, "wanted": wanted}
     return {"answered": True, "answer": strip_verdict(text), "hits": hits[:3]}
 
 
 @app.post("/api/questions")
 def api_store(body: Stored):
-    return {"stored": loop.store_question(db(), body.text)}
+    return {"stored": fetchpass.store_question(db(), body.text)}
 
 
 @app.post("/api/sync")
 def api_sync():
     connection = db()
-    if not provider.loop_enabled():
-        return {"digest": [], "events": ["The loop is off on this instance."], "pending": loop.pending(connection)}
+    if not provider.fetch_enabled():
+        return {"digest": [], "events": ["The fetch pass is off on this instance."], "pending": fetchpass.pending(connection)}
     events: list[str] = []
-    digest = loop.work(connection, _ask, _answer, covers=_cover, log=events.append)
-    return {"digest": digest, "events": events, "pending": loop.pending(connection)}
+    digest = fetchpass.work(connection, _ask, _answer, covers=_cover, log=events.append)
+    return {"digest": digest, "events": events, "pending": fetchpass.pending(connection)}
 
 
 @app.post("/api/chat")
@@ -174,7 +174,7 @@ def api_profile_save(body: Answers):
 
 @app.get("/api/candidates")
 def api_candidates():
-    return {"candidates": loop.candidates(db())}
+    return {"candidates": fetchpass.candidates(db())}
 
 
 @app.post("/api/verdict")
@@ -188,15 +188,15 @@ def api_verdict(body: Verdict):
 @app.get("/api/sync/stream")
 def api_sync_stream():
     """The same pass as POST /api/sync, streamed as one JSON record per line while
-    the loop works, so the screen can show each step. Ends with a {"done": ...} line."""
+    the fetch pass works, so the screen can show each step. Ends with a {"done": ...} line."""
     import queue
     import threading
 
     from fastapi.responses import StreamingResponse
 
     def generate():
-        if not provider.loop_enabled():
-            yield json.dumps({"done": True, "digest": [], "note": "The loop is off on this instance."}) + "\n"
+        if not provider.fetch_enabled():
+            yield json.dumps({"done": True, "digest": [], "note": "The fetch pass is off on this instance."}) + "\n"
             return
         events: "queue.Queue[dict | None]" = queue.Queue()
         result: dict = {}
@@ -204,7 +204,7 @@ def api_sync_stream():
         def run():
             try:
                 connection = db()  # sqlite connections stay on the thread that made them
-                result["digest"] = loop.work(connection, _ask, _answer, covers=_cover, log=lambda _: None, event=events.put)
+                result["digest"] = fetchpass.work(connection, _ask, _answer, covers=_cover, log=lambda _: None, event=events.put)
             except Exception as error:  # noqa: BLE001
                 result["error"] = str(error)
             finally:
@@ -216,7 +216,7 @@ def api_sync_stream():
             if record is None:
                 break
             yield json.dumps(record) + "\n"
-        yield json.dumps({"done": True, "digest": result.get("digest", []), "error": result.get("error"), "pending": loop.pending(db())}) + "\n"
+        yield json.dumps({"done": True, "digest": result.get("digest", []), "error": result.get("error"), "pending": fetchpass.pending(db())}) + "\n"
 
     return StreamingResponse(generate(), media_type="application/x-ndjson", headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
 
@@ -234,8 +234,8 @@ def api_digest():
     return {
         "answered": [{"id": r[0], "question": r[1], "answer": r[2], "volumes": json.loads(r[3] or "[]"), "at": r[4], "state": r[5]} for r in rows],
         "added": [{"id": r[0], "title": r[1], "publisher": r[2], "retrieved": r[3], "line": r[4], "admission": r[5]} for r in added],
-        "candidates": loop.candidates(connection),
-        "pending": loop.pending(connection),
+        "candidates": fetchpass.candidates(connection),
+        "pending": fetchpass.pending(connection),
     }
 
 

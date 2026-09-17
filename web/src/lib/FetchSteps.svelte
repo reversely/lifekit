@@ -1,14 +1,14 @@
 <script lang="ts">
-  // The loop's steps for one pass, in the order they happened, in plain lines.
-  import type { LoopEvent } from './core/api';
+  // The fetch pass's steps for one pass, in the order they happened, in plain lines.
+  import type { FetchEvent } from './core/api';
   import type { Database } from './core/db';
   import { sectionTitle as titleOf } from './core/sections';
   export let db: Database | null = null;
-  export let events: LoopEvent[] = [];
+  export let events: FetchEvent[] = [];
   export let working = false;
 
   const sectionTitle = (id?: string) => (id ? (db ? titleOf(db, id) : id) : '');
-  const line = (e: LoopEvent): string => {
+  const line = (e: FetchEvent): string => {
     switch (e.step) {
       case 'start': return `Question: ${e.text}`;
       case 'named': return `Topic: ${e.topic}`;
@@ -24,7 +24,7 @@
       default: return e.step;
     }
   };
-  $: groups = events.filter((e) => !e.done).reduce((acc: { id: string; items: LoopEvent[] }[], e) => {
+  $: groups = events.filter((e) => !e.done).reduce((acc: { id: string; items: FetchEvent[] }[], e) => {
     const g = acc.find((x) => x.id === e.question);
     if (g) g.items.push(e);
     else acc.push({ id: e.question, items: [e] });

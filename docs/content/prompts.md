@@ -66,7 +66,7 @@ Prompt:
 > question, say so in one sentence.
 
 The first word is the coverage verdict the code reads (`covers.covered`). A reply that begins
-NOT ANSWERED stores the question for the loop; the word is stripped before display. Measured
+NOT ANSWERED stores the question for the fetch pass; the word is stripped before display. Measured
 limitation: the 8B model sometimes writes ANSWERED over passages that only share a word with
 the question (a frostbite passage for "at what temperature does seawater freeze"). The quoted
 passage is always shown beside the answer so the reader sees what it rests on.

@@ -1,6 +1,6 @@
 // Chat threads, carried over from the flux app's chat store: every thread persists in
 // this browser, newest first; a send appends a user turn and a pending assistant turn,
-// then the answer fills it. Offline, the question is stored for the loop instead.
+// then the answer fills it. Offline, the question is stored for the fetch pass instead.
 
 import { writable, get } from 'svelte/store';
 import { enqueue } from './api';

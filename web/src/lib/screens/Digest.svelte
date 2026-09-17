@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { config as fetchConfig, digest as fetchDigest, flush, queued, syncStream, verdict as sendVerdict, type Config, type Digest, type LoopEvent } from '../core/api';
+  import { config as fetchConfig, digest as fetchDigest, flush, queued, syncStream, verdict as sendVerdict, type Config, type Digest, type FetchEvent } from '../core/api';
   import { applyVerdict } from '../core/db';
   import { sectionTitle } from '../core/sections';
-  import LoopTrail from '../LoopTrail.svelte';
+  import FetchSteps from '../FetchSteps.svelte';
   import { online } from '../core/net';
   import NetToggle from '../NetToggle.svelte';
   import type { Database } from '../core/db';
@@ -12,7 +12,7 @@
   let data: Digest | null = null;
   let cfg: Config | null = null;
   let status = '';
-  let events: LoopEvent[] = [];
+  let events: FetchEvent[] = [];
   let working = false;
   $: pending = queued();
 
@@ -69,7 +69,7 @@
 <div class="screen">
   <div class="top">
     <h1>Digest</h1>
-    <span class="sub"><NetToggle size={14} />{cfg ? `${cfg.small}${cfg.loop ? '' : ', downloads off'}` : ''}</span>
+    <span class="sub"><NetToggle size={14} />{cfg ? `${cfg.small}${cfg.fetch ? '' : ', downloads off'}` : ''}</span>
   </div>
 
   {#if pending.length}
@@ -84,7 +84,7 @@
       <button class="res sync" on:click={runSync} disabled={working}>{working ? 'Working' : 'Send stored questions'}</button>
     </div>
     {#if status}<div class="hint">{status}</div>{/if}
-    {#if events.length || working}<div class="group">Search steps</div><LoopTrail {db} {events} {working} />{/if}
+    {#if events.length || working}<div class="group">Search steps</div><FetchSteps {db} {events} {working} />{/if}
   {:else}
     <div class="hint">Stored questions are sent when the network returns.</div>
   {/if}

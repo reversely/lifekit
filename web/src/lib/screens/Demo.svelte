@@ -1,13 +1,13 @@
 <script lang="ts">
-  // The demo route: five stations, each running the model or the loop for real, with one
+  // The demo route: five stations, each running the model or the fetch pass for real, with one
   // paragraph stating what happens and why (docs/content/deployments-and-approval.md 4).
   import { onMount } from 'svelte';
   import type { Database } from '../core/db';
   import { reload } from '../core/db';
-  import { answer as askApi, candidates as fetchCandidates, config as fetchConfig, enqueue, flush, queued, syncStream, type AnswerResult, type Candidate, type LoopEvent } from '../core/api';
+  import { answer as askApi, candidates as fetchCandidates, config as fetchConfig, enqueue, flush, queued, syncStream, type AnswerResult, type Candidate, type FetchEvent } from '../core/api';
   import { online } from '../core/net';
   import { sections } from '../core/sections';
-  import LoopTrail from '../LoopTrail.svelte';
+  import FetchSteps from '../FetchSteps.svelte';
   import NetToggle from '../NetToggle.svelte';
   import Volume from './Volume.svelte';
   import Section from './Section.svelte';
@@ -54,12 +54,12 @@
     stored = true;
   }
 
-  // station 3: the loop, streamed
-  let events: LoopEvent[] = [];
+  // station 3: the fetch pass, streamed
+  let events: FetchEvent[] = [];
   let working = false;
   let ran = false;
   let sent = 0;
-  async function runLoop() {
+  async function runFetch() {
     working = true;
     events = [];
     try {
@@ -94,12 +94,12 @@
   ];
   $: current = stations[step - 1] ?? stations[0];
 
-  // entering a station: switch offline for 2, run the loop for 3, find the candidate for 4
+  // entering a station: switch offline for 2, run the fetch pass for 3, find the candidate for 4
   let lastStep = 0;
   function enter(n: number) {
     if (!loaded) return;
     if (n === 1 && !reply && !asking) ask1();
-    if (n === 3 && !ran && !working) runLoop();
+    if (n === 3 && !ran && !working) runFetch();
     if (n >= 4) findCandidate();
   }
   $: if (step !== lastStep) {
@@ -158,10 +158,10 @@
     {:else if step === 3}
       <div class="top"><h1>Digest</h1><span class="sub"><NetToggle size={14} />{#if sent}{sent} sent{/if}</span></div>
       {#if !working && ran}
-        <div class="syncrow"><button class="res sync" on:click={runLoop}>Search again</button></div>
+        <div class="syncrow"><button class="res sync" on:click={runFetch}>Search again</button></div>
       {/if}
       <div class="group">Search steps</div>
-      <LoopTrail {db} {events} {working} />
+      <FetchSteps {db} {events} {working} />
       {#if !working && ran && !events.some((e) => !e.done)}<div class="hint">No stored question. Return to step 2 and press Ask.</div>{/if}
     {:else if step === 4}
       {#if candidate}

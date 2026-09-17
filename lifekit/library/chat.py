@@ -3,7 +3,7 @@
 Carried over from the flux app's chat (server nemotron.py, app chat.tsx). Each turn
 retrieves the top passages for the question, the model answers in the guide's
 voice and names the document and page it quotes, and a question the pages do
-not cover is stored for the loop with the model's own gap record, so the reply
+not cover is stored for the fetch pass with the model's own gap record, so the reply
 can say what was noted for the library.
 """
 
@@ -11,7 +11,7 @@ import json
 import re
 
 from . import provider
-from .loop import gap_record, store_question
+from .fetchpass import gap_record, store_question
 from .query import search
 
 PASSAGE_LIMIT = 5
@@ -96,7 +96,7 @@ def answer(db, question: str, history: list[dict] | None = None, profile: dict |
         text = re.sub(r"\s*\[[^\]]{3,120}\]", "", text).strip()
     queued = None
     if asking and not covered:
-        topic, wanted = gap_record(lambda s, u: provider.ask(s, u), focus) if provider.loop_enabled() else (None, None)
+        topic, wanted = gap_record(lambda s, u: provider.ask(s, u), focus) if provider.fetch_enabled() else (None, None)
         if topic and topic != "none":
             qid = store_question(db, focus, profile, topic=topic, wanted=wanted)
             queued = {"id": qid, "topic": topic, "wanted": wanted}

@@ -154,16 +154,16 @@ void main() {
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       canvas.dataset.frames = String(++frames); // a check can tell a live scene from a frozen one
     };
-    const loop = (t: number) => {
+    const tick = (t: number) => {
       draw(t);
-      frame = requestAnimationFrame(loop);
+      frame = requestAnimationFrame(tick);
     };
     const onScroll = () => {
       scrollY = window.scrollY;
       if (!animated || reduce.matches) draw(42000);
     };
     resize();
-    if (animated && !reduce.matches) frame = requestAnimationFrame(loop);
+    if (animated && !reduce.matches) frame = requestAnimationFrame(tick);
     else draw(42000);
     const onResize = () => {
       resize();

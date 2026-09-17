@@ -252,7 +252,7 @@ h1, h2, h3 { font-weight: 500; }
 .station-nav { display: flex; gap: 8px; }
 .demo .top { padding-top: 16px; }
 
-/* the loop's trail: one card per question, one line per step */
+/* the fetch pass's trail: one card per question, one line per step */
 .res.trail .step { font: var(--list); color: var(--ink2); padding: 3px 0 3px 14px; border-left: 2px solid var(--line); }
 .res.trail .step.done { color: var(--ink); border-left-color: var(--link); }
 .res.trail .step .inline { color: var(--link); text-decoration: underline; margin-left: 6px; }

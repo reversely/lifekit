@@ -1,13 +1,13 @@
 <script lang="ts">
   // The modal on the offline-to-online transition. When the online store goes from false to
-  // true, the modal measures the connection, sends the stored questions, and runs the loop
+  // true, the modal measures the connection, sends the stored questions, and runs the fetch pass
   // with the trail in view. First load never opens the modal.
   import { onMount } from 'svelte';
   import type { Database } from './core/db';
   import { reload } from './core/db';
-  import { config as fetchConfig, flush, queued, syncStream, type LoopEvent } from './core/api';
+  import { config as fetchConfig, flush, queued, syncStream, type FetchEvent } from './core/api';
   import { online } from './core/net';
-  import LoopTrail from './LoopTrail.svelte';
+  import FetchSteps from './FetchSteps.svelte';
   export let db: Database | null = null;
 
   const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '';
@@ -19,8 +19,8 @@
   let netLine = '';
   let stored: { text: string; at: string }[] = [];
   let sendState: 'idle' | 'sending' | 'sent' = 'idle';
-  let loopState: 'idle' | 'running' | 'done' | 'off' | 'nothing' = 'idle';
-  let events: LoopEvent[] = [];
+  let fetchState: 'idle' | 'running' | 'done' | 'off' | 'nothing' = 'idle';
+  let events: FetchEvent[] = [];
   let closeButton: HTMLButtonElement | null = null;
 
   async function measure() {
@@ -49,7 +49,7 @@
     open = true;
     events = [];
     sendState = 'idle';
-    loopState = 'idle';
+    fetchState = 'idle';
     stored = queued();
     await measure();
     if (stored.length) {
@@ -61,17 +61,17 @@
       }
       sendState = 'sent';
     }
-    let loopOn = true;
+    let fetchOn = true;
     try {
-      loopOn = (await fetchConfig()).loop;
+      fetchOn = (await fetchConfig()).fetch;
     } catch {
-      loopOn = true;
+      fetchOn = true;
     }
-    if (!loopOn) {
-      loopState = 'off';
+    if (!fetchOn) {
+      fetchState = 'off';
       return;
     }
-    loopState = 'running';
+    fetchState = 'running';
     try {
       await syncStream((e) => (events = [...events, e]));
       await reload();
@@ -79,7 +79,7 @@
     } catch {
       /* the trail shows what arrived */
     }
-    loopState = events.some((e) => !e.done) ? 'done' : 'nothing';
+    fetchState = events.some((e) => !e.done) ? 'done' : 'nothing';
   }
 
   onMount(() => {
@@ -118,13 +118,13 @@
         <p class="state">{sendState === 'sending' ? `Sending ${stored.length} question${stored.length === 1 ? '' : 's'}.` : sendState === 'sent' ? 'Sent.' : ''}</p>
       {/if}
       <h3>Searches</h3>
-      {#if loopState === 'off'}
+      {#if fetchState === 'off'}
         <p class="state">Downloads are off.</p>
-      {:else if loopState === 'nothing'}
+      {:else if fetchState === 'nothing'}
         <p class="state">Nothing to work.</p>
       {:else}
-        <LoopTrail {db} {events} working={loopState === 'running'} />
-        {#if loopState === 'done'}<p class="state">Done. <a class="inline" href="#/digest" on:click={close}>Open digest</a></p>{/if}
+        <FetchSteps {db} {events} working={fetchState === 'running'} />
+        {#if fetchState === 'done'}<p class="state">Done. <a class="inline" href="#/digest" on:click={close}>Open digest</a></p>{/if}
       {/if}
     </div>
   </div>

@@ -77,7 +77,7 @@ copy, and decide whether the pack may carry it.
 | retrieved | date | Date the copy was fetched. |
 | sha256 | text | Digest of the fetched file, or of the concatenated page set for HTML. |
 | carry | text | `carry` when the pack ships the copy, `link` when terms allow only a link. |
-| tier | text | `core` (in the stock profile), `regional` (pulled by a profile rule), `learned` (added by the question loop). |
+| tier | text | `core` (in the stock profile), `regional` (pulled by a profile rule), `learned` (added by the fetch pass). |
 | language | text | BCP 47 tag. |
 | page_count | integer | Number of page rows. |
 | freshness | text | `static` (a fixed edition), `seasonal` (rules that change on a schedule, such as trapping seasons), `live` (a value published continuously, such as a fire restriction stage or a river gauge). |
@@ -296,7 +296,7 @@ a declared emergency and illegal otherwise; snares, deadfalls, and fish traps ta
 
 ### 1.9 question and rag_test
 
-`question` stores every question the loop handles, as designed for the agent loop.
+`question` stores every question the fetch pass handles, as designed for the fetch pass.
 
 | Column | Type | Meaning |
 |---|---|---|
@@ -334,7 +334,7 @@ observation log with two clocks, so a reading is never edited and a correction a
 | recorded_at | datetime | When the library learned it. |
 | value | json | The reading with units, or the stage, or the rating. |
 | source_url | text | The exact request that produced it. |
-| fetched_by | text | Agent and version: the app's fetcher, the pack builder, the question loop. |
+| fetched_by | text | Agent and version: the app's fetcher, the pack builder, the fetch pass. |
 | supersedes | text | Id of an earlier observation this one corrects, or empty. |
 
 A passage that applies a rule to a stream names the stream id in `data`, and the answer reads
@@ -419,7 +419,7 @@ volumes pulled for a trip, readings refreshed.
   non-coverage and stores the question.
 - Freshness: an answer that quotes a `seasonal` or `live` volume states the pack's retrieved
   date when offline and reads `live_source` when online.
-- Learned volumes: passages extracted by the question loop take the scope of the question's
+- Learned volumes: passages extracted by the fetch pass take the scope of the question's
   profile snapshot, and the entry that resolves the question links to them with `on_shelf`.
 - Policy: an answer on a `reference_only` topic returns references and sources and no verdict;
   an `emergency_only` topic returns its procedure behind the banner.
@@ -455,7 +455,7 @@ pack/
 
 A pull fetches one `volumes/<volume_id>/` directory and merges its rows into `library.sqlite`.
 The stock pack ships the core tier. A profile change re-evaluates pull rules and queues the
-volumes that are now matched and absent. Learned volumes from the question loop use the same
+volumes that are now matched and absent. Learned volumes from the fetch pass use the same
 directory shape with `tier = learned`.
 
 ## 5. How a source in the survey becomes rows

@@ -14,7 +14,7 @@ backdrops. The alternatives and why they lose:
 - Restyled native Gradio widgets reproduce neither the shader field, the stack
   navigation, nor the component chrome; the first attempt proved it.
 - A `gr.HTML` shell with a hand-rolled esbuild bundle can carry the same DOM, but every
-  screen's reactivity (interview state, chat threads, camera loops) gets re-implemented in
+  screen's reactivity (interview state, chat threads, camera fetch passes) gets re-implemented in
   vanilla JS, and the Python-to-JS bridge gets hand-rolled through hidden widgets. Svelte
   templates sit close to the source JSX, Svelte keeps the sources in TypeScript, and the
   custom-component protocol provides the typed props/events bridge.
@@ -88,9 +88,9 @@ until then the screen ships its chrome with the app's own honest-badge pattern.
 | `/vss/[id]` walks | 483 | Full session: capture card (Record via C4 camera, Skip the clip), interview chips, result card with figure, quote block, Again, the 15-minute shadow-tip timer, `localBaseline` via geolocation | M2; clip read phase 2 |
 | `/guide/[id]` | 259 | Synoptic guide pages (clouds gallery, fire) from `guide.ts`; cloud images need attribution traced before shipping | M2 |
 | `/capture` hub | 167 | Card list with per-card honest badges | M3 chrome |
-| `/sky` | 202 | Auto-loop camera read | M3 chrome; phase 2 capability |
+| `/sky` | 202 | Auto-fetch pass camera read | M3 chrome; phase 2 capability |
 | `/capture/trail` | 462 | MediaRecorder chunking to upload queue, ask-over-clips | M3 chrome; phase 2 capability |
-| `/coach/[knot]` | 518 | Step screen, camera watch loop, voice | M3 chrome; phase 3 capability |
+| `/coach/[knot]` | 518 | Step screen, camera watch fetch pass, voice | M3 chrome; phase 3 capability |
 | `/traces` | 158 | Dev harness over traces store; doubles as the bridge's own test surface | M1, dev flag |
 | `/about` | 245 | Static transfer | M3 |
 | `/conditions` | 96 | No desktop sensors: honest empty state | M3 chrome |

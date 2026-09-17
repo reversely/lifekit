@@ -1,4 +1,4 @@
-"""The question loop: store, name, find a source, pull it as a volume, re-ask, digest.
+"""The fetch pass: store, name, find a source, pull it as a volume, re-ask, digest.
 
 States of a stored question, per docs/content/library-schema.md 1.9:
 stored -> named -> searching -> staged -> extracted -> indexed -> re_asked -> resolved | exhausted
@@ -47,7 +47,7 @@ PICK_PROMPT = (
 
 
 def _get(url: str, timeout: int = 60) -> bytes:
-    request = urllib.request.Request(url, headers={"User-Agent": UA + " lifekit-loop/0.1", "Accept": "*/*"})
+    request = urllib.request.Request(url, headers={"User-Agent": UA + " lifekit-fetch/0.1", "Accept": "*/*"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return response.read()
 
@@ -142,17 +142,17 @@ def pull_wikipedia(db, candidate: dict, section: str, question_id: str) -> str:
     if db.execute("SELECT 1 FROM volume WHERE id = ? AND page_count > 0", (volume_id,)).fetchone():
         # already in the library; a pull is idempotent, but the question still links to it
         db.execute("INSERT INTO provenance VALUES (?,?,?,?,?)",
-                   (volume_id, "pull", "lifekit.library.loop 0.1", json.dumps([question_id]), now()))
+                   (volume_id, "pull", "lifekit.library.fetchpass 0.1", json.dumps([question_id]), now()))
         db.commit()
         return volume_id
     dest = VOLUMES_DIR / volume_id
     dest.mkdir(parents=True, exist_ok=True)
     if candidate.get("zim_path"):
         body = zim.clean_html(zim.article_html(candidate["zim_path"]))
-        fetched_by = f"lifekit.library.loop 0.1 from {zim.available().name}"
+        fetched_by = f"lifekit.library.fetchpass 0.1 from {zim.available().name}"
     else:
         body = _get(candidate["url"])
-        fetched_by = "lifekit.library.loop 0.1"
+        fetched_by = "lifekit.library.fetchpass 0.1"
     (dest / "source.html").write_bytes(body)
     sha = hashlib.sha256(body).hexdigest()
     retrieved = now()
@@ -189,7 +189,7 @@ def pull_wikipedia(db, candidate: dict, section: str, question_id: str) -> str:
     db.execute("UPDATE volume SET page_count = ? WHERE id = ?", (len(pages), volume_id))
     apply_tags(db, volume_id, [f"section:{section}", "type:encyclopedia", "publisher:Wikipedia", "tier:learned"])
     _record_learned(section, volume_id, candidate, retrieved)
-    db.execute("INSERT INTO provenance VALUES (?,?,?,?,?)", (volume_id, "pull", "lifekit.library.loop 0.1", json.dumps([question_id]), now()))
+    db.execute("INSERT INTO provenance VALUES (?,?,?,?,?)", (volume_id, "pull", "lifekit.library.fetchpass 0.1", json.dumps([question_id]), now()))
     db.commit()
     return volume_id
 
@@ -265,7 +265,7 @@ def choose_section(ask, prompt: str, question: str, topic: str) -> str:
 def work(db, ask, answer, covers=None, log=print, event=None) -> list[dict]:
     """Work every pending question once. `ask(system, user)` calls the model; `answer(db, question)`
     returns (text, hits). `event(dict)` receives one record per step as it happens, so a
-    screen can show the loop working. Returns the digest entries produced."""
+    screen can show the fetch pass working. Returns the digest entries produced."""
     from .query import search
 
     def emit(qid: str, step: str, **fields) -> None:

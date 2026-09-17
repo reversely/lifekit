@@ -74,7 +74,7 @@ export interface Profile {
 export interface Config {
   small: string;
   answer: string;
-  loop: boolean;
+  fetch: boolean;
   zim?: { file: string; articles: number } | null;
   sections?: { id: string; order: number; title: string; scope: string; gloss: string; icon: string }[];
   questions?: Record<string, string[]>;
@@ -130,8 +130,8 @@ export async function flush(): Promise<number> {
   return items.length;
 }
 
-/** One record per loop step, as the server emits it. */
-export interface LoopEvent {
+/** One record per fetch pass step, as the server emits it. */
+export interface FetchEvent {
   question: string;
   step: string;
   at: string;
@@ -152,14 +152,14 @@ export interface LoopEvent {
   note?: string;
 }
 
-/** Run the loop and receive each step as it happens. Resolves when the pass ends. */
-export async function syncStream(onEvent: (e: LoopEvent) => void): Promise<LoopEvent | null> {
+/** Run the fetch pass and receive each step as it happens. Resolves when the pass ends. */
+export async function syncStream(onEvent: (e: FetchEvent) => void): Promise<FetchEvent | null> {
   const r = await fetch(`${BASE}/api/sync/stream`, { cache: 'no-store' });
   if (!r.ok || !r.body) throw new Error(`sync: ${r.status}`);
   const reader = r.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-  let last: LoopEvent | null = null;
+  let last: FetchEvent | null = null;
   for (;;) {
     const { value, done } = await reader.read();
     if (done) break;
@@ -169,7 +169,7 @@ export async function syncStream(onEvent: (e: LoopEvent) => void): Promise<LoopE
       const line = buffer.slice(0, index).trim();
       buffer = buffer.slice(index + 1);
       if (!line) continue;
-      const event = JSON.parse(line) as LoopEvent;
+      const event = JSON.parse(line) as FetchEvent;
       last = event;
       onEvent(event);
     }
