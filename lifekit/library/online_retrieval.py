@@ -70,7 +70,11 @@ GAP_PROMPT = (
 
 def store_question(db: sqlite3.Connection, text: str, profile: dict | None = None,
                    origin: str = "asked", topic: str | None = None, wanted: str | None = None) -> str:
-    qid = "q_" + hashlib.sha1((text + now()).encode()).hexdigest()[:10]
+    # The id hashes the text, the time, and a random part, so the same question stored
+    # twice within one second (the browser's queue and the answer route) never collides.
+    import uuid
+
+    qid = "q_" + hashlib.sha1((text + now() + uuid.uuid4().hex).encode()).hexdigest()[:10]
     db.execute(
         "INSERT INTO question (id, text, profile_snapshot, asked_at, state, origin, topic, wanted) VALUES (?,?,?,?,?,?,?,?)",
         (qid, text, json.dumps(profile or {}), now(), "stored", origin, topic, wanted),
