@@ -205,3 +205,27 @@ export async function events(since = 0): Promise<RetrievalEvent[]> {
   if (!r.ok) return [];
   return (await r.json()).events as RetrievalEvent[];
 }
+
+/** Video summarization: the clips on this instance and the vision model. */
+export interface Clip { name: string; seconds: number }
+export const clips = async (): Promise<{ clips: Clip[]; model: string }> => (await api('/api/vss/clips')).json();
+export interface VideoEvent { step: 'start' | 'frames' | 'chunk' | 'report' | 'done' | 'failed'; start?: number; end?: number; count?: number; text?: string; seconds?: number; model?: string; elapsed?: number }
+/** POST /api/vss/stream: one record per step until done or failed. */
+export async function videoStream(body: { clip: string; prompt: string; tracking: string }, onEvent: (e: VideoEvent) => void): Promise<void> {
+  const r = await api('/api/vss/stream', { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!r.ok || !r.body) throw new Error(`video: ${r.status}`);
+  const reader = r.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let index;
+    while ((index = buffer.indexOf('\n')) >= 0) {
+      const line = buffer.slice(0, index).trim();
+      buffer = buffer.slice(index + 1);
+      if (line) onEvent(JSON.parse(line) as VideoEvent);
+    }
+  }
+}

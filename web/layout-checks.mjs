@@ -6,7 +6,7 @@ import puppeteer from 'puppeteer-core';
 const BASE = process.env.BASE ?? 'http://localhost:4173';
 const [outDir, stamp] = process.argv.slice(2);
 const WIDTHS = [390, 768, 900, 1024, 1280, 1440, 1920];
-const ROUTES = [['home', '#/'], ['library', '#/library'], ['recent', '#/recent'], ['section', '#/section/water'], ['search', '#/search?q=tick'], ['volume', '#/volume/nhs-hypothermia?page=2'], ['digest', '#/digest'], ['chat', '#/chat'], ['chats', '#/chats'], ['profile', '#/profile'], ['welcome', '#/welcome'], ['demo', '#/demo/1']];
+const ROUTES = [['home', '#/'], ['library', '#/library'], ['recent', '#/recent'], ['section', '#/section/water'], ['search', '#/search?q=tick'], ['volume', '#/volume/nhs-hypothermia?page=2'], ['digest', '#/digest'], ['chat', '#/chat'], ['chats', '#/chats'], ['video', '#/video'], ['profile', '#/profile'], ['welcome', '#/welcome'], ['demo', '#/demo/1']];
 const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 let failures = 0;

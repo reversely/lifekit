@@ -17,6 +17,7 @@
   import Demo from './lib/screens/Demo.svelte';
   import Chat from './lib/screens/Chat.svelte';
   import Chats from './lib/screens/Chats.svelte';
+  import Video from './lib/screens/Video.svelte';
   import Rail from './lib/Rail.svelte';
   import TopBar from './lib/TopBar.svelte';
   import SceneHost from './lib/SceneHost.svelte';
@@ -60,7 +61,7 @@
 
   const TITLES: Record<string, string> = {
     library: 'Library', recent: 'Recent', search: 'Search', digest: 'Digest', chat: 'Chat', chats: 'Chats',
-    demo: 'How it works', welcome: 'Welcome', profile: 'Profile',
+    demo: 'How it works', welcome: 'Welcome', profile: 'Profile', video: 'Video',
   };
   $: title =
     screen === 'section' ? (db ? sectionTitle(db, parts[1] ?? '') : 'Section')
@@ -109,6 +110,8 @@
   <Chat id={parts[1] ?? null} ask={params.get('ask')} />
 {:else if screen === 'chats'}
   <Chats />
+{:else if screen === 'video'}
+  <Video />
 {:else if screen === 'demo'}
   <Demo {db} step={Number(parts[1] ?? 1)} />
 {:else if screen === 'welcome'}

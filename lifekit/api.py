@@ -31,6 +31,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
+from lifekit import vss
 from lifekit.library import chat as chats, online_retrieval, profile as profiles, provider, verdicts
 from lifekit.library.build import DB_PATH, connect
 from lifekit.packs import LOCAL_PACKS
@@ -41,7 +42,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 TOKEN = os.environ.get("LIFEKIT_TOKEN", "")
 # Routes that change state or read private data need the box token when one is set.
-GUARDED = {("POST", "/api/verdict"), ("PUT", "/api/profile"), ("POST", "/api/questions"), ("POST", "/api/sync"),
+GUARDED = {("POST", "/api/vss/stream"), ("POST", "/api/verdict"), ("PUT", "/api/profile"), ("POST", "/api/questions"), ("POST", "/api/sync"),
            ("GET", "/api/sync/stream"), ("GET", "/api/library.sqlite"), ("GET", "/library.sqlite"), ("GET", "/api/profile"),
            ("POST", "/api/chat"), ("POST", "/api/answer"), ("GET", "/api/digest"), ("GET", "/api/candidates"), ("GET", "/api/events")}
 
@@ -124,6 +125,12 @@ class ChatTurn(BaseModel):
 class ChatRequest(BaseModel):
     question: str = Field(max_length=1000)
     history: list[ChatTurn] = Field(default_factory=list, max_length=20)
+
+
+class VideoRequest(BaseModel):
+    clip: str = Field(max_length=90)
+    prompt: str = Field(max_length=2000)
+    tracking: str = Field(default="", max_length=200)
 
 
 class Verdict(BaseModel):
@@ -340,6 +347,35 @@ def api_db():
 
 
 WEB_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
+
+
+@app.get("/api/vss/clips")
+def api_vss_clips():
+    """The clips in packs/vss-demo, each with its length in seconds, and the vision model in use."""
+    return {"clips": vss.clips(), "model": vss.vision_endpoint()[1]}
+
+
+@app.post("/api/vss/stream")
+def api_vss_stream(body: VideoRequest):
+    """Video summarization of one clip, one JSON record per step: frames cut, each ten-second
+    chunk described by the vision model, then the report from the text model. Ends with a
+    {"step": "done"} or {"step": "failed"} line."""
+    from fastapi import HTTPException
+    from fastapi.responses import StreamingResponse
+
+    if not vss.valid_clip(body.clip):
+        raise HTTPException(status_code=404)
+    return StreamingResponse(vss.stream(body.clip, body.prompt, body.tracking), media_type="application/x-ndjson", headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
+
+
+@app.get("/vss/{name}")
+def api_vss_clip(name: str):
+    """One clip file for the video element."""
+    from fastapi import HTTPException
+
+    if not vss.valid_clip(name):
+        raise HTTPException(status_code=404)
+    return FileResponse(vss.CLIPS / name, media_type="video/mp4")
 
 
 @app.get("/thumbs/{volume_id}.png")
