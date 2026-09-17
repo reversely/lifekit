@@ -87,11 +87,11 @@
     <div class="input-row"><input bind:value={tokenDraft} aria-label="Box token" on:keydown={(e) => e.key === 'Enter' && saveToken()} /><button class="chip ask" on:click={saveToken}>Save</button></div>
   </div></div>
 {/if}
-{#if db && !isHome}
+{#if db}
   <Rail {db} {screen} sectionId={parts[1] ?? null} />
 {/if}
 <TopBar home={isHome} back={!isHome} {title} action={isHome ? null : action} paper={screen === 'library'} />
-<main class="main" class:paper={screen === 'library'} class:full={isHome}>
+<main class="main" class:paper={screen === 'library'} class:home={isHome}>
 {#if !db}
   <div class="screen"><div class="hint">Opening the library.</div></div>
 {:else if isHome}

@@ -332,7 +332,8 @@ h1, h2, h3 { font-weight: 500; }
 .modal .res.trail { margin: 0; }
 
 /* the home takes the full viewport: no rail beside the hero */
-.main.full { margin-left: 0; max-width: none; }
+/* the home keeps the rail; the hero centres in the content column beside it */
+.main.home { max-width: none; }
 .attribution a { color: var(--link); text-decoration: underline; }
 
 /* touch targets: every control is at least 36 px tall and wide (layout check) */
@@ -393,3 +394,6 @@ button.icon-only, .topbar .net, .rail .net, .mode, .bar .x { min-width: 36px; mi
 .screen.video .callout .chip.go { background: #1A9E8C; color: #FFFFFF; border-color: #1A9E8C; font-weight: 500; }
 [data-tour] { scroll-margin: 120px; }
 .screen.video .tour-on { outline: 2px solid #1A9E8C; outline-offset: 4px; border-radius: var(--r-control); }
+
+/* a modal sits centred over a dimmed page */
+.modal-backdrop { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(6, 10, 13, 0.55); }

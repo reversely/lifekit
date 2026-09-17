@@ -163,5 +163,5 @@ on the Space it lets the visitor reach station 2.
 | `POST /api/verdict` | `{volume, verdict: admit or reject, section?}` adds to the library or removes (the path and verbs keep their names) |
 | `GET /api/config` | the provider names and whether the online retrieval is on, for the app's status line |
 | `GET /api/vss/clips` | the clips in `packs/vss-demo` with their length in seconds, and the vision model name |
-| `POST /api/vss/stream` | `{clip, prompt, tracking}`: video summarization, one JSON record per step (frames cut, each ten-second chunk described, the report), token required |
+| `POST /api/vss/stream` | `{clip, prompt, tracking}`: video summarization, one JSON record per step (frames cut, each ten-second chunk described, the report); when LIFEKIT_TOKEN is set on the box, the token is required |
 | `GET /vss/{name}` | one clip file for the player; the name is confined to `packs/vss-demo` |

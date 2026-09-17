@@ -11,7 +11,7 @@
 #   LIFEKIT_ONLINE_RETRIEVAL          on
 #   LIFEKIT_PORT          8008
 #   LIFEKIT_ZIM           on to download the 49 GB offline Wikipedia archive into packs/zim/
-#   LIFEKIT_TOKEN         the box token that browsers and drives send with requests that change state
+#   LIFEKIT_TOKEN         optional: when set, browsers must send it with requests that change the library; unset on a private network
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
