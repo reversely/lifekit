@@ -29,7 +29,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from lifekit.library import chat as chats, online_retrieval, profile as profiles, provider, verdicts
 from lifekit.library.build import DB_PATH, connect
@@ -55,6 +55,16 @@ async def require_token(request, call_next):
 
             return JSONResponse({"error": "token required"}, status_code=401)
     return await call_next(request)
+
+
+from fastapi.exceptions import RequestValidationError
+
+
+@app.exception_handler(RequestValidationError)
+async def bad_input(request, error):
+    from fastapi.responses import JSONResponse
+
+    return JSONResponse({"error": "invalid input"}, status_code=400)
 
 
 def test_run(request) -> bool:
@@ -89,12 +99,12 @@ def _cover(volume_id: str) -> None:
 
 
 class Question(BaseModel):
-    question: str
-    tag: str | None = None
+    question: str = Field(max_length=1000)
+    tag: str | None = Field(default=None, max_length=80)
 
 
 class Stored(BaseModel):
-    text: str
+    text: str = Field(max_length=1000)
 
 
 class Answers(BaseModel):
@@ -112,8 +122,8 @@ class ChatTurn(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    question: str
-    history: list[ChatTurn] = []
+    question: str = Field(max_length=1000)
+    history: list[ChatTurn] = Field(default_factory=list, max_length=20)
 
 
 class Verdict(BaseModel):

@@ -93,6 +93,10 @@ def answer(db, question: str, history: list[dict] | None = None, profile: dict |
     messages.append({"role": "user", "content": question + block})
     raw = provider.chat(messages, max_tokens=600, kind="answer")
     text = _clean(_VERDICT.sub("", raw, count=1))
+    if _instruction_like(text):
+        # the reply repeats an instruction found inside a document; refuse it
+        text = "The retrieved text contained instructions instead of information, so no answer is given from it."
+        covered = False
     if not covered:
         # no source stands behind the reply, so no bracketed citation may remain
         text = re.sub(r"\s*\[[^\]]{3,120}\]", "", text).strip()
@@ -110,7 +114,9 @@ def answer(db, question: str, history: list[dict] | None = None, profile: dict |
                 def _answer(dbc, question):
                     src, blk = _passages(dbc, question)
                     reply = provider.chat([{"role": "system", "content": CHAT_PROMPT}, {"role": "user", "content": question + blk}], max_tokens=600, kind="answer")
-                    return ("ANSWERED " + reply) if src and _covers(question, blk) else ("NOT ANSWERED " + reply), src
+                    # the retrieval code reads hits with number, volume, passage, title
+                    hits = [{**s, "number": s["page"]} for s in src]
+                    return ("ANSWERED " + reply) if src and _covers(question, blk) else ("NOT ANSWERED " + reply), hits
 
                 digest = online_retrieval.retrieve_for_queue(db, lambda s, u: provider.ask(s, u), _answer, only=qid, log=lambda _: None)
                 if digest and digest[0]["state"] == "resolved":
@@ -120,6 +126,14 @@ def answer(db, question: str, history: list[dict] | None = None, profile: dict |
                         covered = True
                         queued = {"id": qid, "topic": topic, "wanted": wanted, "retrieved": digest[0]["volumes"]}
     return {"text": text, "sources": sources if covered else [], "queued": queued, "model": provider.endpoint("answer").name}
+
+
+_INSTRUCTION_MARKS = ("ignore all previous", "ignore previous", "new instruction", "system:", "you are now")
+
+
+def _instruction_like(text: str) -> bool:
+    low = text.lower()
+    return any(m in low for m in _INSTRUCTION_MARKS)
 
 
 def internet_reachable(timeout: float = 3.0) -> bool:

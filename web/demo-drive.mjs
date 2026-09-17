@@ -22,10 +22,12 @@ say('station 1 asks the model on arrival', await until(async () => /ANSWER/i.tes
 say('station 1 answer names a page', /page \d+/i.test(await text()));
 await shot('1');
 await next();
-say('station 2 is offline', /Offline/.test(await text()));
+await page.evaluate(() => (document.querySelector('.rail .net, .rail button.net, .topbar .net') ?? {}).click?.()); await wait(400);
+say('station 2 is offline after the switch', /Offline/.test(await text()));
 await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Ask').click()); await wait(500);
 say('station 2 stores the question', /stored/i.test(await text()));
 await shot('2');
+await page.evaluate(() => (document.querySelector('.rail .net, .rail button.net, .topbar .net') ?? {}).click?.()); await wait(400);
 await next();
 say('station 3 runs the online retrieval on arrival', await until(async () => /Question:|Topic:|Sending|Searched/.test(await text()), 30, 1000));
 say('online retrieval shows a topic step', await until(async () => /Topic:/.test(await text()), 60, 2000));

@@ -145,7 +145,8 @@ def answer(question: str) -> str:
 
 
 BANNED_OPENINGS = ("this document", "the document", "it ", "this ", "in this")
-BANNED_WORDS = ("comprehensive", "essential", "valuable", "useful", "important", "detailed",
+BANNED_WORDS = ("ignore all previous", "ignore previous", "new instruction", "you are now",
+                "comprehensive", "essential", "valuable", "useful", "important", "detailed",
                 "quick", "in-depth", "helpful", "key ", "provides information on", "aims to",
                 "is intended to", "covers a wide range")
 

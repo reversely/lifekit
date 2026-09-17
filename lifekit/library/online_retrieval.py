@@ -112,6 +112,18 @@ def source_rules() -> list[dict]:
     return sorted(rows, key=lambda r: int(r["order"]))
 
 
+REFUSED_LICENCE_MARKS = ("-nd", "noderivatives", "no-derivatives", "all rights reserved", "gated")
+
+
+def licence_allowed(licence: str) -> bool:
+    """A licence with a NoDerivatives term, all rights reserved, or an access gate is
+    refused; every other licence the rules file names is allowed."""
+    low = (licence or "").lower()
+    if any(m in low for m in REFUSED_LICENCE_MARKS):
+        return False
+    return any(low == (r.get("licence") or "").lower() for r in source_rules())
+
+
 def events(db: sqlite3.Connection, since: int = 0, limit: int = 500) -> list[dict]:
     """The event log: one record per step of online retrieval, in order."""
     rows = db.execute(
@@ -193,6 +205,8 @@ def volume_dir(volume_id: str):
 def pull_wikipedia(db, candidate: dict, section: str, question_id: str) -> str:
     """Fetch one article, cut it, index it, tag it. Returns the volume id."""
     volume_id = f"wikipedia-{slug(candidate['title'])}"
+    if not licence_allowed(candidate.get("licence", "CC-BY-SA-4.0")):
+        raise RuntimeError(f"{volume_id}: licence {candidate.get('licence')} is refused by the source rules")
     if volume_id in rejected_ids():
         raise RuntimeError(f"{volume_id}: rejected by the owner earlier")
     if db.execute("SELECT 1 FROM volume WHERE id = ? AND page_count > 0", (volume_id,)).fetchone():
