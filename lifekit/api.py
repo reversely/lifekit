@@ -84,13 +84,22 @@ def _ask(system: str, user: str, max_tokens: int = 250) -> str:
 
 
 def _answer(connection, question: str, tag: str | None = None):
-    from lifekit.library.covers import ANSWER_PROMPT
+    """An answer from the library with a coverage verdict in front. The verdict comes from
+    the chat's separate judgment over the passages, never from the answer model's own
+    first word, which claimed ANSWERED over passages that only shared a word with the question."""
+    from lifekit.library.covers import ANSWER_PROMPT, strip_verdict
 
     hits = search(connection, question, limit=5, tag=tag)
     if not hits:
         return "", []
+    block = "\n\nPassages:\n" + "\n".join(
+        f"- [{h['title']}, {h['edition']}, page {h['number']}] <<<document>>>{h['text'][:chats.PASSAGE_CHARS]}<<<end document>>>" for h in hits
+    )
+    if not chats._covers(question, block):
+        return "NOT ANSWERED The library holds no passage about this question.", hits
     passages = "\n\n".join(f"[{h['title']}, {h['edition']}, page {h['number']}]\n{h['text']}" for h in hits)
-    return provider.ask(ANSWER_PROMPT, f"Question: {question}\n\nPassages:\n{passages}", max_tokens=250, kind="answer"), hits
+    text = strip_verdict(provider.ask(ANSWER_PROMPT, f"Question: {question}\n\nPassages:\n{passages}", max_tokens=250, kind="answer"))
+    return "ANSWERED " + text, hits
 
 
 def _cover(volume_id: str) -> None:

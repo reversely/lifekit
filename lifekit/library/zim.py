@@ -43,21 +43,42 @@ def describe() -> dict | None:
 
 
 def search(topic: str, limit: int = 8) -> list[dict]:
-    """Candidates in the same shape as the live search: title and url."""
+    """Candidates in the same shape as the live search: title and url. Title matches for
+    the topic and for each of its longer words come first, because the full-text index
+    ranks by word frequency and puts "Alternative Cars" above "Alternator" for a topic
+    like "car alternator replacement"; full-text matches for the whole topic follow."""
     path = available()
     if path is None:
         return []
     from libzim.search import Query, Searcher
+    from libzim.suggestion import SuggestionSearcher
 
     archive = _archive(str(path))
-    results = Searcher(archive).search(Query().set_query(topic))
+    paths: list[str] = []
+    suggester = SuggestionSearcher(archive)
+    words = [w for w in re.findall(r"[A-Za-z][A-Za-z-]{3,}", topic) if w.lower() not in _STOP]
+    for query in [topic, *words]:
+        try:
+            paths += list(suggester.suggest(query).getResults(0, 3))
+        except Exception:  # noqa: BLE001
+            continue
+    paths += list(Searcher(archive).search(Query().set_query(topic)).getResults(0, limit))
     out = []
-    for entry_path in results.getResults(0, limit):
+    seen: set[str] = set()
+    for entry_path in paths:
         entry = archive.get_entry_by_path(entry_path)
         if entry.is_redirect:
             entry = entry.get_redirect_entry()
+        if entry.path in seen:
+            continue
+        seen.add(entry.path)
         out.append({"title": entry.title, "url": WIKI_PAGE + entry.path.split("/")[-1], "zim_path": entry.path})
+        if len(out) >= limit + 4:
+            break
     return out
+
+
+_STOP = {"what", "when", "where", "which", "does", "with", "from", "that", "this", "have", "your", "about", "into", "over", "make", "made", "using"}
 
 
 def article_html(zim_path: str) -> bytes:

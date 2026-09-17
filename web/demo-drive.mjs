@@ -3,7 +3,7 @@
 import puppeteer from 'puppeteer-core';
 const BASE = process.env.BASE ?? 'http://localhost:4173';
 const [outDir, stamp] = process.argv.slice(2);
-const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+const browser = await puppeteer.launch({ executablePath: process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true, args: process.env.CHROME ? ['--no-sandbox'] : [] });
 const page = await browser.newPage();
 await page.evaluateOnNewDocument((tok) => { try { if (tok) localStorage.setItem('lifekit.token', tok); localStorage.setItem('lifekit.test', '1'); } catch {} }, process.env.TOKEN ?? '');
 await page.setViewport({ width: 1440, height: 900 });
